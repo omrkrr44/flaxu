@@ -1,0 +1,283 @@
+// FLAXU Database Schema
+// Generated: 2026-01-06
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER MANAGEMENT
+// ============================================================================
+
+model User {
+  id                 String      @id @default(uuid())
+  email              String      @unique
+  passwordHash       String
+
+  // BingX API Keys (encrypted with AES-256-GCM)
+  bingxApiKey        String?     @db.Text
+  bingxSecretKey     String?     @db.Text
+
+  // Verification & Status
+  isVerified         Boolean     @default(false)
+  isDirectReferral   Boolean     @default(false)
+  isIndirectReferral Boolean     @default(false)
+
+  // Wallet & Balance
+  walletBalance      Decimal?    @db.Decimal(20, 8)
+  lastBalanceCheck   DateTime?
+
+  // Access Control
+  accessLevel        AccessLevel @default(LIMITED)
+
+  // Metadata
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  lastLoginAt        DateTime?
+
+  // Relations
+  trades             Trade[]
+  sessions           Session[]
+  notifications      Notification[]
+
+  @@index([email])
+  @@index([accessLevel])
+  @@index([isDirectReferral, isIndirectReferral])
+  @@map("users")
+}
+
+enum AccessLevel {
+  LIMITED    // Not verified or insufficient balance
+  FULL       // Verified referral with $200+ balance
+  SUSPENDED  // Manually suspended by admin
+}
+
+// ============================================================================
+// AUTHENTICATION
+// ============================================================================
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  refreshToken String?  @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  ipAddress    String?
+  userAgent    String?
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  type      TokenType
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+
+  @@index([email])
+  @@index([token])
+  @@map("verification_tokens")
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+// ============================================================================
+// TRADING
+// ============================================================================
+
+model Trade {
+  id            String      @id @default(uuid())
+  userId        String
+
+  // Trade Details
+  symbol        String      // e.g., BTC-USDT
+  side          TradeSide
+  entryPrice    Decimal     @db.Decimal(20, 8)
+  exitPrice     Decimal?    @db.Decimal(20, 8)
+  stopLoss      Decimal     @db.Decimal(20, 8)
+  takeProfit    Decimal     @db.Decimal(20, 8)
+
+  // Position Info
+  positionSize  Decimal     @db.Decimal(20, 8)
+  leverage      Int
+
+  // Status & P&L
+  status        TradeStatus @default(PENDING)
+  pnl           Decimal?    @db.Decimal(20, 8)
+  pnlPercent    Decimal?    @db.Decimal(10, 4)
+
+  // Signal Info
+  signalType    SignalType
+  confidence    Int?        // 0-100 for ICT signals
+  signalReason  String?     // e.g., "PUMP_REVERSAL", "FVG_LONG"
+
+  // Timestamps
+  openedAt      DateTime    @default(now())
+  closedAt      DateTime?
+
+  // BingX Integration
+  bingxOrderId  String?     @unique
+
+  // Relations
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([symbol])
+  @@index([status])
+  @@index([signalType])
+  @@index([openedAt])
+  @@map("trades")
+}
+
+enum TradeSide {
+  LONG
+  SHORT
+}
+
+enum TradeStatus {
+  PENDING    // Order placed but not filled
+  OPEN       // Position is open
+  CLOSED     // Position closed (TP/SL hit or manual close)
+  CANCELLED  // Order cancelled before fill
+  FAILED     // Order failed
+}
+
+enum SignalType {
+  ICT        // ICT & PA automated signal
+  SNIPER     // Sniper scalp signal
+  MANUAL     // User manually opened
+}
+
+// ============================================================================
+// MARKET DATA (TimescaleDB optimized)
+// ============================================================================
+
+model PriceData {
+  id        String   @id @default(uuid())
+  symbol    String
+  timestamp DateTime @default(now())
+
+  open      Decimal  @db.Decimal(20, 8)
+  high      Decimal  @db.Decimal(20, 8)
+  low       Decimal  @db.Decimal(20, 8)
+  close     Decimal  @db.Decimal(20, 8)
+  volume    Decimal  @db.Decimal(20, 8)
+
+  @@index([symbol, timestamp])
+  @@map("price_data")
+}
+
+model LiquidationData {
+  id        String   @id @default(uuid())
+  symbol    String
+  timestamp DateTime @default(now())
+
+  side      TradeSide
+  price     Decimal  @db.Decimal(20, 8)
+  quantity  Decimal  @db.Decimal(20, 8)
+  exchange  String   // "bingx", "binance", etc.
+
+  @@index([symbol, timestamp])
+  @@map("liquidation_data")
+}
+
+model FundingRate {
+  id        String   @id @default(uuid())
+  symbol    String
+  timestamp DateTime @default(now())
+
+  rate      Decimal  @db.Decimal(10, 6)
+  exchange  String
+
+  @@index([symbol, timestamp])
+  @@map("funding_rates")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+
+  type      NotificationType
+  title     String
+  message   String   @db.Text
+  data      Json?    // Additional data (e.g., trade details, signal info)
+
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  TRADE_SIGNAL       // New trading signal detected
+  TRADE_OPENED       // Position opened
+  TRADE_CLOSED       // Position closed (TP/SL)
+  BALANCE_WARNING    // Wallet balance below threshold
+  ACCESS_DOWNGRADED  // Access level changed to LIMITED
+  SYSTEM_ALERT       // System maintenance, errors, etc.
+}
+
+// ============================================================================
+// ADMIN & SYSTEM
+// ============================================================================
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  timestamp DateTime @default(now())
+
+  level     LogLevel
+  service   String   // "backend", "python-signals", etc.
+  message   String   @db.Text
+  context   Json?    // Additional context data
+
+  @@index([timestamp])
+  @@index([level])
+  @@map("system_logs")
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  CRITICAL
+}
+
+model AdminAction {
+  id        String   @id @default(uuid())
+  adminId   String   // Admin user ID
+  action    String   // "suspend_user", "override_access", etc.
+  targetId  String?  // ID of affected entity
+  reason    String?  @db.Text
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("admin_actions")
+}
