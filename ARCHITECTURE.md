@@ -25,7 +25,7 @@
 - Sniper bot for extreme volatility opportunities
 - Comprehensive market intelligence dashboard
 
-**Target Users**: BingX users in your referral network with $200+ deposits in last 5 days
+**Target Users**: BingX users in your direct or indirect referral network with minimum $200 total wallet balance
 
 ---
 
@@ -106,13 +106,13 @@ Monitoring:
 ### 3.1 High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Next.js)                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
-│  │   Auth   │  │Dashboard │  │  Trading │  │  Admin   │        │
-│  │Gatekeeper│  │Analytics │  │ Engines  │  │  Panel   │        │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
-└─────────────────────────┬───────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (Next.js)                           │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│  │   Auth   │ │Dashboard │ │  Trading │ │  Profile │ │  Admin   │ │
+│  │Gatekeeper│ │Analytics │ │ Engines  │ │Dashboard │ │  Panel   │ │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘ │
+└─────────────────────────┬───────────────────────────────────────────┘
                           │ HTTPS/WSS
 ┌─────────────────────────▼───────────────────────────────────────┐
 │                    API GATEWAY (Express.js)                      │
@@ -153,8 +153,8 @@ Monitoring:
 
 #### **Gatekeeper Service**
 - BingX API key validation
-- Referral verification via BingX API
-- Deposit history check (last 5 days, $200+ threshold)
+- Referral verification via BingX API (direct & indirect referrals)
+- Total wallet balance check ($200+ threshold)
 - Access control logic
 
 #### **Trading Engine Service**
@@ -192,21 +192,22 @@ Email Verification
          ↓
 User Enters BingX API Keys
          ↓
-┌────────────────────────────────┐
-│  API Key Validation (BingX)    │
-└────────┬───────────────────────┘
+┌─────────────────────────────────────┐
+│    API Key Validation (BingX)       │
+└────────┬────────────────────────────┘
          ↓
-┌────────────────────────────────┐
-│  Referral Check via BingX API  │
-└────┬───────────────────┬───────┘
+┌─────────────────────────────────────┐
+│  Referral Check via BingX API       │
+│  (Direct OR Indirect Referrals)     │
+└────┬───────────────────┬────────────┘
      │                   │
   ✓ YES              ✗ NO
      │                   │
      ↓                   ↓
-Deposit Check      Show Warning
-(Last 5 days)      + Referral Link
+Wallet Balance     Show Warning
+Check              + Referral Link
      │                   │
-  $200+            Redirect to KYC
+  ≥ $200           Redirect to KYC
      ↓              Transfer Guide
 FULL ACCESS             ↓
                    LIMITED ACCESS
@@ -218,17 +219,18 @@ FULL ACCESS             ↓
 ```typescript
 // Database schema
 model User {
-  id              String   @id @default(uuid())
-  email           String   @unique
-  passwordHash    String
-  bingxApiKey     String?  // Encrypted with AES-256-GCM
-  bingxSecretKey  String?  // Encrypted with AES-256-GCM
-  isVerified      Boolean  @default(false)
-  isReferral      Boolean  @default(false)
-  hasDeposit      Boolean  @default(false)
-  lastDepositCheck DateTime?
-  accessLevel     AccessLevel @default(LIMITED)
-  createdAt       DateTime @default(now())
+  id                String   @id @default(uuid())
+  email             String   @unique
+  passwordHash      String
+  bingxApiKey       String?  // Encrypted with AES-256-GCM
+  bingxSecretKey    String?  // Encrypted with AES-256-GCM
+  isVerified        Boolean  @default(false)
+  isDirectReferral  Boolean  @default(false)
+  isIndirectReferral Boolean @default(false)
+  walletBalance     Decimal? // Total wallet balance in USD
+  lastBalanceCheck  DateTime?
+  accessLevel       AccessLevel @default(LIMITED)
+  createdAt         DateTime @default(now())
 }
 
 enum AccessLevel {
@@ -244,40 +246,43 @@ enum AccessLevel {
 async function checkReferralStatus(apiKey: string, secretKey: string) {
   const client = new BingXClient(apiKey, secretKey);
 
-  // Check referral
+  // Check referral (direct or indirect)
   const referralInfo = await client.getReferralInfo();
-  const isReferral = referralInfo.referrerId === YOUR_BINGX_ID;
+  const isDirectReferral = referralInfo.referrerId === YOUR_BINGX_ID;
+  const isIndirectReferral = referralInfo.referralChain?.includes(YOUR_BINGX_ID);
 
-  if (!isReferral) {
+  if (!isDirectReferral && !isIndirectReferral) {
     return {
       status: 'NOT_REFERRAL',
       redirectTo: 'SIGNUP_LINK'
     };
   }
 
-  // Check deposits (last 5 days)
-  const deposits = await client.getDepositHistory({
-    startTime: Date.now() - (5 * 24 * 60 * 60 * 1000)
-  });
+  // Check total wallet balance
+  const accountInfo = await client.getAccountBalance();
+  const totalBalance = accountInfo.totalWalletBalance; // in USD
 
-  const totalDeposit = deposits.reduce((sum, d) => sum + d.amount, 0);
-
-  if (totalDeposit < 200) {
+  if (totalBalance < 200) {
     return {
-      status: 'INSUFFICIENT_DEPOSIT',
-      amount: totalDeposit,
+      status: 'INSUFFICIENT_BALANCE',
+      currentBalance: totalBalance,
       required: 200
     };
   }
 
-  return { status: 'APPROVED' };
+  return {
+    status: 'APPROVED',
+    isDirectReferral,
+    isIndirectReferral,
+    walletBalance: totalBalance
+  };
 }
 ```
 
 3. **Periodic Re-validation**:
-- Check deposit status every 24 hours (cron job)
-- If user drops below threshold, downgrade access
-- Email notification system
+- Check wallet balance every 24 hours (cron job)
+- If user drops below $200 threshold, downgrade access to LIMITED
+- Email notification system for balance warnings
 
 ### 4.2 Trading Engines
 
@@ -405,13 +410,15 @@ enum TradeStatus {
 
 #### **B. Sniper Scalp Engine**
 
+**Strategy**: Mean-reversion approach - SHORT after pumps, LONG after dumps
+
 **Detection Criteria**:
 ```typescript
 interface SniperCriteria {
   timeWindow: 5 minutes
   priceMovement: {
-    pump: +5% or more
-    dump: -10% or more
+    pump: +5% or more   → Open SHORT (expect reversal)
+    dump: -10% or more  → Open LONG (expect recovery)
   }
   liquidationCleared: 75% of order book liquidations
 }
@@ -437,17 +444,22 @@ class SniperScalpDetector {
       const priceChange = ((current.price - fiveMinAgo.price) / fiveMinAgo.price) * 100;
 
       // Check pump/dump
-      if (Math.abs(priceChange) >= 5) {
+      const isPump = priceChange >= 5;   // +5% or more
+      const isDump = priceChange <= -10; // -10% or more
+
+      if (isPump || isDump) {
         const liqData = await this.getLiquidationData(symbol);
         const liqClearPercent = this.calculateLiquidationClear(liqData);
 
         if (liqClearPercent >= 75) {
           // OPPORTUNITY FOUND!
+          // Mean-reversion strategy: SHORT on pump, LONG on dump
           await this.notifyUser({
             symbol,
             priceChange,
             liqClearPercent,
-            direction: priceChange > 0 ? 'LONG' : 'SHORT'
+            direction: isPump ? 'SHORT' : 'LONG',
+            reason: isPump ? 'PUMP_REVERSAL' : 'DUMP_RECOVERY'
           });
         }
       }
@@ -525,7 +537,189 @@ class ArbitrageScanner {
 }
 ```
 
-### 4.4 Admin Panel
+### 4.4 User Profile Dashboard
+
+**Purpose**: Comprehensive portfolio and performance tracking for connected BingX accounts
+
+**Features**:
+
+1. **Wallet Overview**
+```typescript
+interface WalletOverview {
+  totalBalance: number;        // Total account balance (USD)
+  availableBalance: number;    // Available for trading
+  marginUsed: number;          // Currently in positions
+  unrealizedPnL: number;       // Open positions P&L
+  totalEquity: number;         // Balance + unrealized PnL
+  lastUpdated: Date;
+}
+```
+
+2. **Recent Trades**
+```typescript
+interface RecentTradeDisplay {
+  id: string;
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  entryPrice: number;
+  exitPrice: number;
+  positionSize: number;
+  leverage: number;
+  pnl: number;
+  pnlPercent: number;
+  duration: string;            // "2h 15m"
+  signalType: 'ICT' | 'SNIPER' | 'MANUAL';
+  openedAt: Date;
+  closedAt: Date;
+}
+
+// Display last 20 trades with pagination
+```
+
+3. **Performance Metrics (ROI Tracking)**
+```typescript
+interface PerformanceMetrics {
+  // Time-based ROI
+  roi24h: number;              // % return last 24 hours
+  roi7d: number;               // % return last 7 days
+  roi30d: number;              // % return last 30 days
+  roiAllTime: number;          // % return since account creation
+
+  // Trade statistics
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;             // % (winningTrades / totalTrades)
+
+  // Profit/Loss breakdown
+  totalProfit: number;         // Sum of all winning trades
+  totalLoss: number;           // Sum of all losing trades
+  netPnL: number;              // totalProfit - totalLoss
+  avgWin: number;              // Average winning trade
+  avgLoss: number;             // Average losing trade
+  profitFactor: number;        // totalProfit / totalLoss
+
+  // Risk metrics
+  maxDrawdown: number;         // Largest peak-to-trough decline (%)
+  sharpeRatio: number;         // Risk-adjusted return
+  largestWin: Trade;
+  largestLoss: Trade;
+}
+```
+
+4. **Active Positions**
+```typescript
+interface ActivePosition {
+  id: string;
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  entryPrice: number;
+  currentPrice: number;
+  markPrice: number;
+  positionSize: number;
+  leverage: number;
+  unrealizedPnL: number;
+  unrealizedPnLPercent: number;
+  margin: number;
+  liquidationPrice: number;
+  stopLoss: number;
+  takeProfit: number;
+  openedAt: Date;
+  duration: string;
+}
+
+// Real-time updates via WebSocket
+```
+
+5. **Performance Charts**
+- **Equity Curve**: Line chart showing account balance over time
+- **Daily P&L Bar Chart**: Green/red bars for each day's performance
+- **Win/Loss Distribution**: Histogram of trade returns
+- **Symbol Performance**: Which symbols are most profitable
+
+**Implementation**:
+```typescript
+class ProfileDashboardService {
+  async getWalletOverview(userId: string): Promise<WalletOverview> {
+    const user = await getUserWithApiKeys(userId);
+    const bingx = new BingXClient(user.apiKey, user.secretKey);
+
+    const balance = await bingx.getBalance();
+    const positions = await bingx.getOpenPositions();
+
+    const unrealizedPnL = positions.reduce((sum, p) => sum + p.unrealizedPnL, 0);
+
+    return {
+      totalBalance: balance.totalWalletBalance,
+      availableBalance: balance.availableBalance,
+      marginUsed: balance.totalMarginUsed,
+      unrealizedPnL,
+      totalEquity: balance.totalWalletBalance + unrealizedPnL,
+      lastUpdated: new Date()
+    };
+  }
+
+  async getPerformanceMetrics(userId: string): Promise<PerformanceMetrics> {
+    const trades = await this.getUserTrades(userId);
+
+    const winningTrades = trades.filter(t => t.pnl > 0);
+    const losingTrades = trades.filter(t => t.pnl < 0);
+
+    const totalProfit = winningTrades.reduce((sum, t) => sum + t.pnl, 0);
+    const totalLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.pnl, 0));
+
+    return {
+      roi24h: this.calculateROI(trades, 24 * 60 * 60 * 1000),
+      roi7d: this.calculateROI(trades, 7 * 24 * 60 * 60 * 1000),
+      roi30d: this.calculateROI(trades, 30 * 24 * 60 * 60 * 1000),
+      roiAllTime: this.calculateROI(trades),
+
+      totalTrades: trades.length,
+      winningTrades: winningTrades.length,
+      losingTrades: losingTrades.length,
+      winRate: (winningTrades.length / trades.length) * 100,
+
+      totalProfit,
+      totalLoss,
+      netPnL: totalProfit - totalLoss,
+      avgWin: totalProfit / winningTrades.length,
+      avgLoss: totalLoss / losingTrades.length,
+      profitFactor: totalProfit / totalLoss,
+
+      maxDrawdown: this.calculateMaxDrawdown(trades),
+      sharpeRatio: this.calculateSharpeRatio(trades),
+      largestWin: winningTrades.sort((a, b) => b.pnl - a.pnl)[0],
+      largestLoss: losingTrades.sort((a, b) => a.pnl - b.pnl)[0]
+    };
+  }
+
+  async getActivePositions(userId: string): Promise<ActivePosition[]> {
+    const user = await getUserWithApiKeys(userId);
+    const bingx = new BingXClient(user.apiKey, user.secretKey);
+
+    const positions = await bingx.getOpenPositions();
+    const currentPrices = await this.getCurrentPrices(positions.map(p => p.symbol));
+
+    return positions.map(pos => ({
+      ...pos,
+      currentPrice: currentPrices[pos.symbol],
+      unrealizedPnL: this.calculateUnrealizedPnL(pos, currentPrices[pos.symbol]),
+      duration: this.formatDuration(Date.now() - pos.openedAt.getTime())
+    }));
+  }
+}
+```
+
+**UI Components**:
+- Modern card-based layout
+- Real-time price updates (WebSocket)
+- Interactive charts (TradingView Lightweight Charts)
+- Export functionality (CSV/PDF)
+- Mobile-responsive design
+
+---
+
+### 4.5 Admin Panel
 
 **Features**:
 1. **User Management Dashboard**
@@ -704,8 +898,8 @@ const rateLimits = {
 - [x] Email verification system
 - [x] Gatekeeper implementation
   - BingX API integration
-  - Referral check
-  - Deposit verification
+  - Referral check (direct & indirect)
+  - Wallet balance verification ($200+ threshold)
 - [x] Basic dashboard UI
 - [x] API key management page
 - [x] Dark mode UI theme
@@ -713,14 +907,14 @@ const rateLimits = {
 **Deliverables**:
 - Users can register and verify email
 - Users can enter BingX API keys
-- System checks referral status and deposits
-- Access granted/denied based on criteria
+- System checks referral status (direct/indirect) and wallet balance
+- Access granted/denied based on criteria (referral + $200+ balance)
 
 ---
 
-### Phase 2: Trading Engines (Week 3-4)
+### Phase 2: Trading Engines & User Profile (Week 3-4)
 
-**Goal**: ICT/PA bot and Sniper bot functional
+**Goal**: ICT/PA bot, Sniper bot, and comprehensive user profile dashboard
 
 **Tasks**:
 - [x] WebSocket connection to BingX
@@ -731,17 +925,22 @@ const rateLimits = {
   - Confidence scoring
 - [x] Auto-trade execution logic
 - [x] TP/SL calculation algorithms
-- [x] Sniper scalp detector
+- [x] Sniper scalp detector (mean-reversion strategy)
   - 5-minute price monitoring
   - Liquidation data integration
+  - PUMP → SHORT, DUMP → LONG logic
   - Manual trigger UI
-- [x] Trade history dashboard
-- [x] Position monitoring (open trades)
+- [x] User Profile Dashboard
+  - Wallet overview (balance, margin, equity)
+  - Recent trades history
+  - Performance metrics (ROI, win rate, P&L)
+  - Active positions with real-time updates
+  - Performance charts (equity curve, daily P&L)
 
 **Deliverables**:
 - ICT bot generates signals and executes trades (auto mode)
-- Sniper bot detects opportunities (manual trigger)
-- Users can see trade history and PnL
+- Sniper bot detects opportunities with mean-reversion strategy (manual trigger)
+- Users can track wallet, trades, ROI, and active positions in real-time
 
 ---
 
@@ -1113,7 +1312,41 @@ This architecture provides a **solid foundation** for FLAXU to scale from MVP to
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Last Updated**: 2026-01-06
 **Author**: Senior Software Architect
 **Status**: Ready for Implementation
+
+---
+
+## Changelog
+
+### Version 1.1 (2026-01-06)
+**Updated based on stakeholder feedback:**
+
+1. **Gatekeeper System Enhancements**:
+   - ✅ Now supports both **direct and indirect referrals** (not just direct)
+   - ✅ Changed from "last 5 days deposit $200+" to "**total wallet balance ≥ $200**"
+   - ✅ Updated database schema with `isDirectReferral` and `isIndirectReferral` fields
+   - ✅ Updated flow diagram and implementation code
+
+2. **Sniper Scalp Engine Strategy Change**:
+   - ✅ Implemented **mean-reversion strategy**
+   - ✅ **PUMP (+5%)** → Open **SHORT** position (expect reversal)
+   - ✅ **DUMP (-10%)** → Open **LONG** position (expect recovery)
+   - ✅ Updated detection logic and implementation code
+
+3. **New Feature: User Profile Dashboard** (Section 4.4):
+   - ✅ **Wallet Overview**: Real-time balance, margin, equity tracking
+   - ✅ **Recent Trades**: Last 20 trades with pagination
+   - ✅ **Performance Metrics**: ROI (24h, 7d, 30d, all-time), win rate, P&L, profit factor
+   - ✅ **Active Positions**: Real-time position monitoring with unrealized P&L
+   - ✅ **Performance Charts**: Equity curve, daily P&L, win/loss distribution
+   - ✅ Added to Phase 2 implementation roadmap
+
+4. **Architecture Updates**:
+   - ✅ Updated high-level system architecture diagram to include Profile Dashboard
+   - ✅ Updated Phase 2 roadmap title and deliverables
+
+### Version 1.0 (2026-01-06)
+- Initial architecture document
