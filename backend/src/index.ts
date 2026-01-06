@@ -6,6 +6,11 @@ import { connectDatabase } from './config/database';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
+import { startBalanceCheckJob } from './jobs/balanceCheck.job';
+
+// Import routes
+import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
 
 const app = express();
 
@@ -32,12 +37,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes will be added here
-// TODO: Import and use routes
-// app.use('/api/auth', authRoutes);
-// app.use('/api/users', userRoutes);
-// app.use('/api/trades', tradeRoutes);
-// etc.
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -51,11 +53,21 @@ const startServer = async () => {
     // Connect to database
     await connectDatabase();
 
+    // Start cron jobs
+    startBalanceCheckJob();
+
     // Start listening
     const server = app.listen(config.PORT, () => {
       logger.info(`🚀 Server running on port ${config.PORT}`);
       logger.info(`📝 Environment: ${config.NODE_ENV}`);
       logger.info(`🔗 API: http://localhost:${config.PORT}`);
+      logger.info(`📊 Routes:`);
+      logger.info(`   POST /api/auth/register`);
+      logger.info(`   POST /api/auth/login`);
+      logger.info(`   POST /api/auth/verify-email`);
+      logger.info(`   GET  /api/users/profile`);
+      logger.info(`   POST /api/users/api-keys`);
+      logger.info(`   POST /api/users/gatekeeper/check`);
     });
 
     // Graceful shutdown
