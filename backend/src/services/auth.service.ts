@@ -1,5 +1,5 @@
 import { AccessLevel, TokenType } from '@prisma/client';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../config/database';
 import config from '../config/env';
 import { hashPassword, verifyPassword, generateToken } from '../utils/encryption';
@@ -320,22 +320,20 @@ export class AuthService {
    * Generate JWT access token
    */
   private generateAccessToken(userId: string, email: string): string {
-    return jwt.sign(
-      { userId, email },
-      config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRATION as string }
-    );
+    const options: SignOptions = {
+      expiresIn: config.JWT_EXPIRATION
+    };
+    return jwt.sign({ userId, email }, config.JWT_SECRET, options);
   }
 
   /**
    * Generate refresh token
    */
   private generateRefreshToken(userId: string): string {
-    return jwt.sign(
-      { userId, type: 'refresh' },
-      config.JWT_SECRET,
-      { expiresIn: '7d' as string }
-    );
+    const options: SignOptions = {
+      expiresIn: '7d'
+    };
+    return jwt.sign({ userId, type: 'refresh' }, config.JWT_SECRET, options);
   }
 }
 
