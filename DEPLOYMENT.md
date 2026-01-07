@@ -8,7 +8,7 @@
 
 ---
 
-## 📁 VPS Dosya Yapısı (Amazon EC2)
+## 📁 VPS Dosya Yapısı (AWS Lightsail)
 
 Proje `/var/www/flaxu` dizinine kurulacak:
 
@@ -54,21 +54,22 @@ git pull https://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@github.com/omrkrr44/fl
 
 **Önerilen Hosting Seçenekleri:**
 
-#### Option A: Amazon EC2 (Mevcut VPS) ⭐⭐ ÜCRETSİZ - ÖNERİLEN
+#### Option A: AWS Lightsail (Mevcut VPS) ⭐⭐ ÜCRETSİZ - ÖNERİLEN
 **Maliyet:** $0 (Mevcut VPS kullanılacak)
-- Frontend + Backend + DB: Mevcut Amazon EC2 VPS
+- Frontend + Backend + DB: Mevcut AWS Lightsail VPS
 - Domain: flaxu.io
 - Diğer 2 sitenle birlikte çalışır
 
 **Artılar:**
 - ✅ Ek maliyet yok
-- ✅ Statik IP zaten var
+- ✅ Static IP zaten var (Lightsail'de ücretsiz)
 - ✅ Full kontrol
 - ✅ Mevcut sitelerle birlikte çalışır
 - ✅ Tek yerden yönetim
+- ✅ EC2'den daha basit interface
 
 **Gereksinimler:**
-- Minimum 4GB RAM (önerilen 8GB)
+- Minimum 4GB RAM (Lightsail $20/ay plan veya üstü)
 - En az 20GB boş disk alanı
 - Docker ve Docker Compose
 - Nginx (muhtemelen zaten kurulu)
@@ -107,15 +108,17 @@ git pull https://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@github.com/omrkrr44/fl
 
 ---
 
-## 🚀 Production Deployment (Option A - Amazon EC2 Mevcut VPS)
+## 🚀 Production Deployment (Option A - AWS Lightsail Mevcut VPS)
 
 ### Ön Hazırlık: VPS Sistem Kontrolü
 
 **A. VPS'e Bağlan:**
 ```bash
-ssh ubuntu@YOUR_AMAZON_VPS_IP
-# veya
-ssh ec2-user@YOUR_AMAZON_VPS_IP
+# Lightsail genelde Ubuntu kullanır
+ssh ubuntu@YOUR_LIGHTSAIL_STATIC_IP
+
+# Veya SSH key ile (Lightsail dashboard'dan indirilmiş key)
+ssh -i ~/Downloads/LightsailDefaultKey-us-east-1.pem ubuntu@YOUR_LIGHTSAIL_STATIC_IP
 ```
 
 **B. Sistem Kaynaklarını Kontrol Et:**
@@ -157,24 +160,38 @@ sudo apt install nginx certbot python3-certbot-nginx -y
 
 ---
 
-### 1. AWS Security Group Ayarları
+### 1. Lightsail Firewall Ayarları
 
-**A. AWS Console'a Git:**
-- EC2 Dashboard → Security Groups
-- VPS'inin kullandığı Security Group'u seç
-
-**B. Inbound Rules Ekle:**
+**A. Lightsail Console'a Git:**
 ```
-Type        | Protocol | Port Range | Source      | Description
-------------|----------|------------|-------------|------------------
-HTTP        | TCP      | 80         | 0.0.0.0/0   | Web traffic
-HTTPS       | TCP      | 443        | 0.0.0.0/0   | Secure web
-SSH         | TCP      | 22         | MY_IP/32    | SSH (sadece senin IP'n)
-Custom TCP  | TCP      | 4000       | 127.0.0.1   | Backend (local only)
-Custom TCP  | TCP      | 3000       | 127.0.0.1   | Frontend (local only)
+https://lightsail.aws.amazon.com/
+→ Instance'ını seç
+→ "Networking" sekmesi
 ```
 
-**NOT:** Port 4000 ve 3000 sadece localhost'tan erişilebilir olmalı. Nginx reverse proxy üzerinden dışarıya açılacak.
+**B. Firewall Rules Ekle:**
+
+**Zaten Açık Olması Gerekenler:**
+```
+Application | Protocol | Port    | Source
+------------|----------|---------|-------------
+SSH         | TCP      | 22      | Anywhere (0.0.0.0/0)
+HTTP        | TCP      | 80      | Anywhere (0.0.0.0/0) ✅
+HTTPS       | TCP      | 443     | Anywhere (0.0.0.0/0) ✅
+```
+
+**Kontrol Et:**
+- HTTP (80) ve HTTPS (443) portları açık mı?
+- Eğer kapalıysa "Add rule" ile ekle:
+  - Application: Custom
+  - Protocol: TCP
+  - Port: 80 (ve 443)
+  - Restrict to IP address: Hayır (0.0.0.0/0)
+
+**NOT:**
+- Port 4000 ve 3000'i Lightsail firewall'da açma!
+- Nginx reverse proxy üzerinden yönlendirilecek
+- Sadece 80 ve 443 açık olmalı
 
 ---
 
@@ -461,7 +478,7 @@ curl https://api.flaxu.io/health
 
 ---
 
-### 8. Domain Bağlama (Fastcomet cPanel → AWS EC2)
+### 8. Domain Bağlama (Fastcomet cPanel → AWS Lightsail)
 
 #### Option 1: cPanel DNS Yönetimi (Önerilen - Kolay)
 
@@ -490,7 +507,7 @@ Mevcut A record'ları göreceksin
 ```
 Type: A
 Name: @ (veya boş bırak)
-Address/Value: YOUR_AMAZON_VPS_IP (AWS Elastic IP)
+Address/Value: YOUR_LIGHTSAIL_STATIC_IP (Lightsail'den aldığın IP)
 TTL: 14400 (4 saat) veya Auto
 ```
 
@@ -498,7 +515,7 @@ TTL: 14400 (4 saat) veya Auto
 ```
 Type: A
 Name: www
-Address/Value: YOUR_AMAZON_VPS_IP
+Address/Value: YOUR_LIGHTSAIL_STATIC_IP
 TTL: 14400
 ```
 
@@ -506,7 +523,7 @@ TTL: 14400
 ```
 Type: A
 Name: api
-Address/Value: YOUR_AMAZON_VPS_IP
+Address/Value: YOUR_LIGHTSAIL_STATIC_IP
 TTL: 14400
 ```
 
@@ -555,48 +572,61 @@ Cloudflare sana 2 nameserver verecek:
 ```
 Cloudflare Dashboard → DNS → Records
 
-A | @ | YOUR_AMAZON_VPS_IP | Proxied ☁️ (veya DNS only)
-A | www | YOUR_AMAZON_VPS_IP | Proxied ☁️
-A | api | YOUR_AMAZON_VPS_IP | DNS only ⚠️
+A | @ | YOUR_LIGHTSAIL_STATIC_IP | Proxied ☁️ (veya DNS only)
+A | www | YOUR_LIGHTSAIL_STATIC_IP | Proxied ☁️
+A | api | YOUR_LIGHTSAIL_STATIC_IP | DNS only ⚠️
 
 NOT: API subdomain için "DNS only" kullan (Proxied değil)
 ```
 
 ---
 
-#### AWS Elastic IP Almak (Önemli!)
+#### Lightsail Static IP Kontrol Et (Önemli!)
 
-Domain eklemeden önce AWS'de sabit IP al:
+Lightsail'de Static IP zaten var, sadece kontrol et:
 
-**A. AWS Console → EC2 → Elastic IPs:**
+**A. Lightsail Console → Networking → Static IP:**
 ```
-1. "Allocate Elastic IP address" tıkla
-2. "Allocate" → Yeni IP oluştur
-3. IP'yi not al (örn: 54.123.45.67)
-```
-
-**B. Elastic IP'yi VPS'e Bağla:**
-```
-1. Yeni oluşturduğun Elastic IP'yi seç
-2. "Actions" → "Associate Elastic IP address"
-3. Instance: VPS'ini seç
-4. "Associate" tıkla
+https://lightsail.aws.amazon.com/
+→ Instance'ını seç
+→ "Networking" sekmesi
+→ "Static IP" bölümünde IP'yi gör
 ```
 
-**C. VPS'in Yeni IP'sini Kontrol Et:**
+**B. Static IP Varsa:**
+```
+✅ Static IP: 54.123.45.67 (örnek)
+Status: Attached
+Instance: your-instance-name
+
+Bu IP'yi domain DNS ayarlarında kullanacaksın!
+```
+
+**C. Static IP Yoksa (Nadiren):**
+```
+1. Lightsail Console → "Networking" sekmesi
+2. "Create static IP" tıkla
+3. Instance'ını seç
+4. IP adı ver (örn: flaxu-static-ip)
+5. "Create" → Ücretsiz!
+
+NOT: Lightsail'de Static IP her zaman ücretsizdir (instance'a bağlıysa)
+```
+
+**D. VPS'in IP'sini Kontrol Et:**
 ```bash
 # VPS'e SSH ile bağlan
-ssh ubuntu@NEW_ELASTIC_IP
+ssh ubuntu@YOUR_STATIC_IP
 
 # Public IP'yi kontrol et
 curl ifconfig.me
-# Çıktı: NEW_ELASTIC_IP olmalı
+# Çıktı: YOUR_STATIC_IP olmalı
 ```
 
 **⚠️ ÖNEMLİ:**
-- Elastic IP kullanmazsan AWS her restart'ta IP değiştirir!
-- Domain'i eklemeden önce mutlaka Elastic IP al ve VPS'e bağla
-- Elastic IP ücretsizdir (VPS'e bağlıysa)
+- Lightsail'de Static IP kullanmazsan restart'ta IP değişebilir!
+- Static IP ücretsizdir (instance'a attached olduğu sürece)
+- EC2 Elastic IP'den farklı olarak Lightsail'de daha basit
 
 ---
 
@@ -613,7 +643,7 @@ Dünya çapında DNS propagation durumunu gösterir
 ```bash
 # Root domain kontrol
 dig flaxu.io +short
-# Çıktı: YOUR_AMAZON_VPS_IP olmalı
+# Çıktı: YOUR_LIGHTSAIL_STATIC_IP olmalı
 
 # WWW subdomain
 dig www.flaxu.io +short
@@ -657,7 +687,7 @@ Dropdown'dan "flaxu.io" seç
 "Add Record" butonu
 Type: A
 Name: @ (root için) veya www, api (subdomain için)
-Address: YOUR_AMAZON_VPS_IP
+Address: YOUR_LIGHTSAIL_STATIC_IP
 TTL: 14400
 → "Add Record"
 ```
@@ -665,9 +695,9 @@ TTL: 14400
 **4. Kayıtları Kontrol:**
 ```
 Ekledikten sonra:
-@ → YOUR_AWS_IP
-www → YOUR_AWS_IP
-api → YOUR_AWS_IP
+@ → YOUR_LIGHTSAIL_STATIC_IP
+www → YOUR_LIGHTSAIL_STATIC_IP
+api → YOUR_LIGHTSAIL_STATIC_IP
 
 Eski kayıtlar varsa sil (Fastcomet IP'li olanlar)
 ```
@@ -705,7 +735,7 @@ Chrome: Ctrl+Shift+Delete → "Cached images and files"
 ```
 1. DNS henüz yayılmadı → Bekle
 2. A record'ları doğru IP'ye işaret etmiyor → cPanel'de kontrol et
-3. AWS Elastic IP VPS'e bağlı değil → AWS Console'da kontrol et
+3. Lightsail Static IP instance'a bağlı değil → Lightsail Console'da kontrol et
 ```
 
 **SSL sertifikası almak için:**
@@ -726,23 +756,24 @@ sudo certbot --nginx -d flaxu.io -d www.flaxu.io -d api.flaxu.io
 **Fastcomet cPanel DNS Kayıtları:**
 
 ```
-Type  | Name | Value                  | TTL   | Açıklama
-------|------|------------------------|-------|------------------
-A     | @    | YOUR_AMAZON_VPS_IP     | 14400 | Root domain (flaxu.io)
-A     | www  | YOUR_AMAZON_VPS_IP     | 14400 | www.flaxu.io
-A     | api  | YOUR_AMAZON_VPS_IP     | 14400 | api.flaxu.io
+Type  | Name | Value                     | TTL   | Açıklama
+------|------|---------------------------|-------|------------------
+A     | @    | YOUR_LIGHTSAIL_STATIC_IP  | 14400 | Root domain (flaxu.io)
+A     | www  | YOUR_LIGHTSAIL_STATIC_IP  | 14400 | www.flaxu.io
+A     | api  | YOUR_LIGHTSAIL_STATIC_IP  | 14400 | api.flaxu.io
 ```
 
-**AWS Elastic IP:**
+**Lightsail Static IP:**
 ```
-Elastic IP: YOUR_AMAZON_VPS_IP (örn: 54.123.45.67)
-VPS Instance: i-xxxxxxxxxxxxx (senin EC2 instance)
-Status: Associated ✅
+Static IP: YOUR_LIGHTSAIL_STATIC_IP (örn: 54.123.45.67)
+Instance Name: your-lightsail-instance
+Status: Attached ✅
+Region: us-east-1 (or your region)
 ```
 
 **DNS Propagation Kontrolü:**
 ```bash
-# Her 3'ü de AWS IP'sini döndürmeli:
+# Her 3'ü de Lightsail Static IP'sini döndürmeli:
 dig flaxu.io +short
 dig www.flaxu.io +short
 dig api.flaxu.io +short
@@ -1210,14 +1241,15 @@ journalctl -u nginx -f
 
 ## 💰 Toplam Maliyet (Aylık)
 
-### Option A: Amazon EC2 (Mevcut VPS) ⭐
-- Amazon EC2: $0 (Zaten var)
+### Option A: AWS Lightsail (Mevcut VPS) ⭐
+- AWS Lightsail: $0 (Zaten var - aylık plan devam ediyor)
+- Static IP: $0 (Ücretsiz - instance'a bağlı olduğu sürece)
 - Vercel: $0 (Kullanılmıyor)
 - Domain: $0 (Zaten var)
-- **TOPLAM: $0/ay** 🎉
+- **TOPLAM: $0/ay** (Mevcut Lightsail planı) 🎉
 
-### Option B: Vercel + Amazon EC2
-- Amazon EC2: $0 (Zaten var)
+### Option B: Vercel + AWS Lightsail
+- AWS Lightsail: $0 (Zaten var)
 - Vercel: $0 (Hobby tier)
 - Domain: $0 (Zaten var)
 - **TOPLAM: $0/ay** 🎉
@@ -1229,10 +1261,12 @@ journalctl -u nginx -f
 - **TOPLAM: ~$14/ay**
 
 ### Gelişmiş Setup (100+ kullanıcı)
-- Amazon EC2 (Upgrade): ~$50-100/ay
+- AWS Lightsail (Upgrade to 8GB RAM): ~$40/ay
 - Vercel Pro: $20
-- Managed PostgreSQL: $15
-- **TOPLAM: ~$85-135/ay**
+- Managed PostgreSQL (Lightsail): $15/ay
+- **TOPLAM: ~$75/ay**
+
+NOT: Lightsail, EC2'den daha uygun fiyatlı ve basit yönetim sunuyor.
 
 ---
 
@@ -1401,80 +1435,80 @@ sudo systemctl restart nginx
 
 ---
 
-## 📝 Hızlı Başlangıç (Özet - Amazon EC2)
+## 📝 Hızlı Başlangıç (Özet - AWS Lightsail)
 
 ```bash
-# 1. SSH ile mevcut VPS'e bağlan
-ssh ubuntu@YOUR_AMAZON_VPS_IP
+# 1. Lightsail Static IP'yi kontrol et (İLK ADIM!)
+# https://lightsail.aws.amazon.com/
+# Instance seç → Networking → Static IP'yi not al
+# Örn: 54.123.45.67
 
-# 2. Sistem kontrolü
+# 2. Lightsail Firewall'da port aç
+# Instance seç → Networking → Firewall
+# HTTP (80) ve HTTPS (443) açık olmalı ✅
+
+# 3. SSH ile mevcut VPS'e bağlan
+ssh ubuntu@YOUR_LIGHTSAIL_STATIC_IP
+
+# 4. Sistem kontrolü
 free -h && df -h && docker --version
 
-# 3. Gerekli paketleri kur (yoksa)
+# 5. Gerekli paketleri kur (yoksa)
 curl -fsSL https://get.docker.com | sh
 sudo apt install nginx certbot python3-certbot-nginx git npm -y
 sudo npm install -g pm2
 
-# 4a. AWS Elastic IP al (İLK ADIM!)
-# AWS Console → EC2 → Elastic IPs → Allocate
-# IP'yi VPS'e bağla (Associate)
-# Bu IP'yi not al: YOUR_ELASTIC_IP
-
-# 4b. AWS Security Group'ta port aç
-# AWS Console → EC2 → Security Groups
-# Inbound: 80, 443 (0.0.0.0/0)
-
-# 5. Projeyi klonla (GitHub token ile)
+# 6. Projeyi klonla (GitHub token ile)
 cd /var/www
 sudo git clone https://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@github.com/omrkrr44/flaxu.git
 sudo chown -R $USER:$USER flaxu
 cd flaxu && git checkout claude/crypto-trading-app-KTgle
 
-# 6. .env oluştur (secrets oluştur)
+# 7. .env oluştur (secrets oluştur)
 nano .env
 # openssl rand -hex 32, openssl rand -base64 32
 
-# 7. Frontend build
+# 8. Frontend build
 cd frontend && npm install && npm run build
 
-# 8. Docker servisleri başlat
+# 9. Docker servisleri başlat
 cd .. && docker-compose up -d postgres redis backend python-signals
 
-# 9. Database migration
+# 10. Database migration
 docker-compose exec backend npx prisma migrate deploy
 docker-compose exec backend npx prisma generate
 
-# 10. Frontend PM2 ile başlat
+# 11. Frontend PM2 ile başlat
 cd frontend && pm2 start npm --name "flaxu-frontend" -- start
 pm2 save && pm2 startup
 
-# 11. Nginx config
+# 12. Nginx config
 sudo nano /etc/nginx/sites-available/flaxu.io
 sudo nano /etc/nginx/sites-available/api.flaxu.io
 sudo ln -s /etc/nginx/sites-available/flaxu.io /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/api.flaxu.io /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 
-# 12. Domain DNS ayarları (Fastcomet cPanel'de YAP!)
+# 13. Domain DNS ayarları (Fastcomet cPanel'de YAP!)
 # https://my.fastcomet.com → Login
 # Services → My Services → flaxu.io → Manage
 # cPanel → Zone Editor
 # Yeni A Record'lar ekle:
-#   Type: A, Name: @, Address: YOUR_ELASTIC_IP, TTL: 14400
-#   Type: A, Name: www, Address: YOUR_ELASTIC_IP, TTL: 14400
-#   Type: A, Name: api, Address: YOUR_ELASTIC_IP, TTL: 14400
+#   Type: A, Name: @, Address: YOUR_LIGHTSAIL_STATIC_IP, TTL: 14400
+#   Type: A, Name: www, Address: YOUR_LIGHTSAIL_STATIC_IP, TTL: 14400
+#   Type: A, Name: api, Address: YOUR_LIGHTSAIL_STATIC_IP, TTL: 14400
 # Eski Fastcomet IP'li kayıtları SİL!
 # DNS propagation bekle (5-30 dakika)
 
-# 13. DNS yayıldığını kontrol et
+# 14. DNS yayıldığını kontrol et
 dig flaxu.io +short
-# Çıktı: YOUR_ELASTIC_IP olmalı
+# Çıktı: YOUR_LIGHTSAIL_STATIC_IP olmalı
 
-# 14. SSL kur (DNS yayıldıktan SONRA!)
+# 15. SSL kur (DNS yayıldıktan SONRA!)
 sudo certbot --nginx -d flaxu.io -d www.flaxu.io
 sudo certbot --nginx -d api.flaxu.io
 
-# 15. Test et
+# 16. Test et
 curl https://api.flaxu.io/health
 curl -I https://flaxu.io
 
