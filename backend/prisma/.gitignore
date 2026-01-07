@@ -1,0 +1,3 @@
+migrations/
+*.db
+*.db-journal
