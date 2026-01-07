@@ -18,7 +18,7 @@ export interface AuthRequest extends Request {
  */
 export const authenticate = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -72,7 +72,7 @@ export const authenticate = async (
  */
 export const requireFullAccess = (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   if (req.user?.accessLevel !== AccessLevel.FULL) {
@@ -89,7 +89,7 @@ export const requireFullAccess = (
  */
 export const requireAdmin = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {
@@ -113,7 +113,7 @@ export const requireAdmin = async (
  */
 export const optionalAuth = async (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   const token = req.headers.authorization?.replace('Bearer ', '');

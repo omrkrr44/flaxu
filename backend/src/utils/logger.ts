@@ -27,7 +27,7 @@ const format = winston.format.combine(
   })
 );
 
-const transports = [
+const transports: winston.transport[] = [
   new winston.transports.Console({
     format,
   }),
@@ -43,7 +43,9 @@ if (config.NODE_ENV === 'production') {
         winston.format.timestamp(),
         winston.format.json()
       ),
-    }),
+    })
+  );
+  transports.push(
     new winston.transports.File({
       filename: 'logs/combined.log',
       format: winston.format.combine(

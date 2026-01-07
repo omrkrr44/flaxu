@@ -1,7 +1,6 @@
-import { User, AccessLevel, TokenType } from '@prisma/client';
+import { AccessLevel, TokenType } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
-import { cache } from '../config/redis';
 import config from '../config/env';
 import { hashPassword, verifyPassword, generateToken } from '../utils/encryption';
 import { emailService } from './email.service';

@@ -5,7 +5,6 @@ import { decrypt } from '../utils/encryption';
 import { emailService } from './email.service';
 import { logger } from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
-import config from '../config/env';
 
 const MINIMUM_BALANCE = 200; // $200 USD
 
