@@ -14,7 +14,44 @@
 
 **Önerilen Hosting Seçenekleri:**
 
-#### Option A: Vercel (Frontend) + DigitalOcean/Hetzner (Backend) ✅ ÖNERİLEN
+#### Option A: Amazon EC2 (Mevcut VPS) ⭐⭐ ÜCRETSİZ - ÖNERİLEN
+**Maliyet:** $0 (Mevcut VPS kullanılacak)
+- Frontend + Backend + DB: Mevcut Amazon EC2 VPS
+- Domain: flaxu.io
+- Diğer 2 sitenle birlikte çalışır
+
+**Artılar:**
+- ✅ Ek maliyet yok
+- ✅ Statik IP zaten var
+- ✅ Full kontrol
+- ✅ Mevcut sitelerle birlikte çalışır
+- ✅ Tek yerden yönetim
+
+**Gereksinimler:**
+- Minimum 4GB RAM (önerilen 8GB)
+- En az 20GB boş disk alanı
+- Docker ve Docker Compose
+- Nginx (muhtemelen zaten kurulu)
+
+---
+
+#### Option B: Vercel (Frontend) + Amazon EC2 (Backend)
+**Maliyet:** $0 (Free tier)
+- Frontend: Vercel (ücretsiz/hobby plan)
+- Backend: Mevcut Amazon EC2 VPS
+- Database: Same VPS
+- Domain: flaxu.io
+
+**Artılar:**
+- ✅ Frontend için CDN
+- ✅ Kolay setup
+- ✅ Otomatik SSL (Vercel)
+- ✅ Git entegrasyonu
+- ✅ Backend VPS'te kalır
+
+---
+
+#### Option C: Vercel (Frontend) + Yeni Hetzner (Backend)
 **Maliyet:** ~$15-20/ay
 - Frontend: Vercel (ücretsiz/hobby plan)
 - Backend: Hetzner VPS (€12.96/ay)
@@ -26,21 +63,410 @@
 - ✅ Otomatik SSL
 - ✅ CDN dahil (Vercel)
 - ✅ Git entegrasyonu
-- ✅ Düşük maliyet
-
-#### Option B: Tamamen Hetzner
-**Maliyet:** ~$15/ay
-- Frontend + Backend + DB: Hetzner VPS
-- Domain: flaxu.io
-
-**Artılar:**
-- ✅ Tek yer, kolay yönetim
-- ✅ Çok ucuz
-- ✅ Full kontrol
+- ✅ Amazon VPS yükünü azaltır
 
 ---
 
-## 🚀 Production Deployment (Option A - Önerilen)
+## 🚀 Production Deployment (Option A - Amazon EC2 Mevcut VPS)
+
+### Ön Hazırlık: VPS Sistem Kontrolü
+
+**A. VPS'e Bağlan:**
+```bash
+ssh ubuntu@YOUR_AMAZON_VPS_IP
+# veya
+ssh ec2-user@YOUR_AMAZON_VPS_IP
+```
+
+**B. Sistem Kaynaklarını Kontrol Et:**
+```bash
+# RAM kontrolü
+free -h
+
+# Disk kontrolü
+df -h
+
+# CPU kontrolü
+nproc
+
+# Mevcut Docker kontrol
+docker --version
+docker-compose --version
+
+# Nginx kontrol
+nginx -v
+systemctl status nginx
+```
+
+**C. Gerekli Kurulumlar (yoksa):**
+```bash
+# Docker kurulu değilse
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Docker Compose kurulu değilse
+sudo apt update
+sudo apt install docker-compose -y
+
+# Git kurulu değilse
+sudo apt install git -y
+
+# Nginx kurulu değilse
+sudo apt install nginx certbot python3-certbot-nginx -y
+```
+
+---
+
+### 1. AWS Security Group Ayarları
+
+**A. AWS Console'a Git:**
+- EC2 Dashboard → Security Groups
+- VPS'inin kullandığı Security Group'u seç
+
+**B. Inbound Rules Ekle:**
+```
+Type        | Protocol | Port Range | Source      | Description
+------------|----------|------------|-------------|------------------
+HTTP        | TCP      | 80         | 0.0.0.0/0   | Web traffic
+HTTPS       | TCP      | 443        | 0.0.0.0/0   | Secure web
+SSH         | TCP      | 22         | MY_IP/32    | SSH (sadece senin IP'n)
+Custom TCP  | TCP      | 4000       | 127.0.0.1   | Backend (local only)
+Custom TCP  | TCP      | 3000       | 127.0.0.1   | Frontend (local only)
+```
+
+**NOT:** Port 4000 ve 3000 sadece localhost'tan erişilebilir olmalı. Nginx reverse proxy üzerinden dışarıya açılacak.
+
+---
+
+### 2. Projeyi VPS'e Klonla
+
+**A. Proje Dizini Oluştur:**
+```bash
+# Projeler için dizin oluştur
+sudo mkdir -p /var/www
+cd /var/www
+
+# FLAXU'yu klonla
+sudo git clone https://github.com/omrkrr44/flaxu.git
+sudo chown -R $USER:$USER flaxu
+cd flaxu
+git checkout claude/crypto-trading-app-KTgle
+```
+
+**B. Production .env Oluştur:**
+```bash
+nano .env
+```
+
+```env
+# Database
+DATABASE_URL="postgresql://flaxu_user:STRONG_PASSWORD_HERE@postgres:5432/flaxu_db?schema=public"
+REDIS_URL="redis://redis:6379"
+ENCRYPTION_KEY="GENERATE_32_BYTE_HEX"
+
+# Auth
+JWT_SECRET="GENERATE_SECRET"
+NEXTAUTH_SECRET="GENERATE_SECRET"
+NEXTAUTH_URL="https://flaxu.io"
+
+# BingX
+BINGX_API_KEY="r95s18r1yXW7zZ5kTA5OAXu9P3mNSzaqf8AHEp92zr5TCZD73LeaxUycYaK1qgzAZxhPQ3NP9j60SiXpQ"
+BINGX_SECRET_KEY="w79nIiouFOTtnh72Q56wWfSAYlhAbGRVSrlQJ1yK62RmlvEqO4ZUE9gadEQbPS0y4e9Ha1Myyc7mAODNHQw"
+BINGX_REFERRER_ID="YOUR_BINGX_USER_ID"
+BINGX_API_URL="https://open-api.bingx.com"
+
+# Email
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-gmail-app-password"
+SMTP_FROM="FLAXU <noreply@flaxu.io>"
+
+# App Settings
+NODE_ENV="production"
+BACKEND_PORT="4000"
+FRONTEND_PORT="3000"
+NEXT_PUBLIC_API_URL="https://api.flaxu.io"
+NEXT_PUBLIC_WS_URL="wss://api.flaxu.io"
+CORS_ORIGINS="https://flaxu.io,https://www.flaxu.io"
+LOG_LEVEL="info"
+
+# Database (Docker)
+POSTGRES_USER="flaxu_user"
+POSTGRES_PASSWORD="STRONG_PASSWORD_HERE"
+POSTGRES_DB="flaxu_db"
+```
+
+**C. Güvenli Secrets Oluştur:**
+```bash
+# Encryption key (32 bytes hex)
+openssl rand -hex 32
+
+# JWT secret
+openssl rand -base64 32
+
+# Postgres password
+openssl rand -base64 24
+```
+
+---
+
+### 3. Frontend Build Oluştur (Next.js Production)
+
+**A. Frontend Build:**
+```bash
+cd /var/www/flaxu/frontend
+
+# Node modules kur
+npm install
+
+# Production build
+npm run build
+
+# Build başarılı mı kontrol et
+ls -la .next
+```
+
+---
+
+### 4. Docker Servisleri Başlat
+
+**A. Backend ve Database'i Çalıştır:**
+```bash
+cd /var/www/flaxu
+
+# Servisleri başlat (frontend hariç, onu Nginx serve edecek)
+docker-compose up -d postgres redis backend python-signals
+
+# Servisleri kontrol et
+docker-compose ps
+
+# Logları izle
+docker-compose logs -f backend
+```
+
+**B. Database Migration:**
+```bash
+# Migration çalıştır
+docker-compose exec backend npx prisma migrate deploy
+
+# Prisma client oluştur
+docker-compose exec backend npx prisma generate
+
+# Database bağlantısını test et
+docker-compose exec backend npx prisma db pull
+```
+
+**C. Health Check:**
+```bash
+# Backend'in çalıştığını kontrol et
+curl http://localhost:4000/health
+# Beklenen: {"status":"ok",...}
+```
+
+---
+
+### 5. Nginx Multi-Site Configuration
+
+**A. FLAXU Frontend Nginx Config:**
+```bash
+sudo nano /etc/nginx/sites-available/flaxu.io
+```
+
+```nginx
+# FLAXU Frontend (flaxu.io)
+server {
+    server_name flaxu.io www.flaxu.io;
+
+    root /var/www/flaxu/frontend/.next;
+
+    # Next.js static files
+    location /_next/static {
+        alias /var/www/flaxu/frontend/.next/static;
+        expires 1y;
+        access_log off;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Next.js server (production mode)
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+**B. FLAXU API Nginx Config:**
+```bash
+sudo nano /etc/nginx/sites-available/api.flaxu.io
+```
+
+```nginx
+# FLAXU Backend API (api.flaxu.io)
+server {
+    server_name api.flaxu.io;
+
+    # WebSocket support
+    location / {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # Timeout ayarları
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+    limit_req zone=api_limit burst=20 nodelay;
+}
+```
+
+**C. Config'leri Aktif Et:**
+```bash
+# Symlink oluştur
+sudo ln -s /etc/nginx/sites-available/flaxu.io /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/api.flaxu.io /etc/nginx/sites-enabled/
+
+# Nginx config test
+sudo nginx -t
+
+# Nginx reload
+sudo systemctl reload nginx
+```
+
+**D. Diğer Sitelerin Config'i:**
+```bash
+# Mevcut sitelerini listele
+ls -la /etc/nginx/sites-enabled/
+
+# Örnek yapı:
+# /etc/nginx/sites-enabled/
+# ├── site1.com -> /etc/nginx/sites-available/site1.com
+# ├── site2.com -> /etc/nginx/sites-available/site2.com
+# ├── flaxu.io -> /etc/nginx/sites-available/flaxu.io
+# └── api.flaxu.io -> /etc/nginx/sites-available/api.flaxu.io
+```
+
+---
+
+### 6. Frontend Production Server (PM2)
+
+**A. PM2 Kur:**
+```bash
+sudo npm install -g pm2
+```
+
+**B. Frontend'i PM2 ile Başlat:**
+```bash
+cd /var/www/flaxu/frontend
+
+# Production mode'da Next.js başlat
+pm2 start npm --name "flaxu-frontend" -- start
+
+# PM2'yi kaydet
+pm2 save
+
+# Otomatik başlatma
+pm2 startup
+# Çıkan komutu çalıştır (sudo ile başlayan)
+```
+
+**C. PM2 Status Kontrol:**
+```bash
+pm2 status
+pm2 logs flaxu-frontend
+```
+
+---
+
+### 7. SSL Sertifikası (Let's Encrypt)
+
+**A. Certbot ile SSL Kur:**
+```bash
+# Frontend için
+sudo certbot --nginx -d flaxu.io -d www.flaxu.io
+
+# Backend API için
+sudo certbot --nginx -d api.flaxu.io
+
+# Otomatik yenileme testi
+sudo certbot renew --dry-run
+```
+
+**B. SSL Başarılı mı Kontrol:**
+```bash
+# HTTPS kontrolü
+curl -I https://flaxu.io
+curl https://api.flaxu.io/health
+```
+
+---
+
+### 8. DNS Ayarları
+
+**A. Domain Panel'ine Git**
+(Domain sağlayıcın - GoDaddy, Namecheap, Cloudflare vb.)
+
+**B. A Record'ları Ekle:**
+```
+Type  | Name          | Value                  | TTL
+------|---------------|------------------------|-----
+A     | @             | YOUR_AMAZON_VPS_IP     | Auto
+A     | www           | YOUR_AMAZON_VPS_IP     | Auto
+A     | api           | YOUR_AMAZON_VPS_IP     | Auto
+```
+
+**C. DNS Propagation Kontrol:**
+```bash
+# Linux/Mac'te
+dig flaxu.io
+dig api.flaxu.io
+
+# Online araç
+# https://dnschecker.org
+```
+
+---
+
+### 9. Test Et
+
+**A. Backend Test:**
+```bash
+curl https://api.flaxu.io/health
+# Beklenen: {"status":"ok",...}
+```
+
+**B. Frontend Test:**
+```bash
+curl -I https://flaxu.io
+# Beklenen: 200 OK
+```
+
+**C. Tarayıcıda Test:**
+1. `https://flaxu.io` → Landing page görünmeli
+2. Register → Email doğrula → Login
+3. Dashboard → API Keys → BingX bağla
+4. Gatekeeper check → Access level kontrol
+
+---
+
+## 🚀 Production Deployment (Option B - Vercel + Amazon EC2)
 
 ### 1. Frontend'i Vercel'e Deploy Et
 
@@ -401,17 +827,29 @@ journalctl -u nginx -f
 
 ## 💰 Toplam Maliyet (Aylık)
 
-### Minimal Setup
+### Option A: Amazon EC2 (Mevcut VPS) ⭐
+- Amazon EC2: $0 (Zaten var)
+- Vercel: $0 (Kullanılmıyor)
+- Domain: $0 (Zaten var)
+- **TOPLAM: $0/ay** 🎉
+
+### Option B: Vercel + Amazon EC2
+- Amazon EC2: $0 (Zaten var)
+- Vercel: $0 (Hobby tier)
+- Domain: $0 (Zaten var)
+- **TOPLAM: $0/ay** 🎉
+
+### Option C: Vercel + Yeni Hetzner
 - Hetzner VPS (CPX31): €12.96 (~$14)
 - Vercel: $0 (Hobby tier)
-- Domain: $0 (zaten var)
+- Domain: $0 (Zaten var)
 - **TOPLAM: ~$14/ay**
 
 ### Gelişmiş Setup (100+ kullanıcı)
-- Hetzner VPS (CPX41): €23.96 (~$26)
+- Amazon EC2 (Upgrade): ~$50-100/ay
 - Vercel Pro: $20
 - Managed PostgreSQL: $15
-- **TOPLAM: ~$61/ay**
+- **TOPLAM: ~$85-135/ay**
 
 ---
 
@@ -420,25 +858,66 @@ journalctl -u nginx -f
 ### Backend'e ulaşılamıyor
 ```bash
 # Port dinleniyor mu?
-netstat -tlnp | grep 4000
+sudo netstat -tlnp | grep 4000
 
 # Docker çalışıyor mu?
 docker-compose ps
 
 # Nginx çalışıyor mu?
-systemctl status nginx
+sudo systemctl status nginx
 
-# Firewall kontrolü
-ufw status
+# Nginx error log
+sudo tail -f /var/log/nginx/error.log
+
+# Backend logs
+docker-compose logs -f backend
+
+# Firewall kontrolü (Ubuntu)
+sudo ufw status
+```
+
+### AWS Security Group Hatası
+```bash
+# Problem: Port 80/443'e dışarıdan erişilemiyor
+# Çözüm:
+# 1. AWS Console → EC2 → Security Groups
+# 2. VPS'in security group'unu seç
+# 3. Inbound rules:
+#    - HTTP (80) - Source: 0.0.0.0/0
+#    - HTTPS (443) - Source: 0.0.0.0/0
+
+# Local'den test et
+curl http://localhost:4000/health   # ✅ Çalışmalı
+curl http://YOUR_VPS_IP:4000/health # ❌ Çalışmamalı (security)
+curl https://api.flaxu.io/health    # ✅ Çalışmalı (Nginx üzerinden)
+```
+
+### Nginx Config Hatası
+```bash
+# Config test
+sudo nginx -t
+
+# Syntax hatası varsa gösterir
+# Config'i düzenle
+sudo nano /etc/nginx/sites-available/flaxu.io
+
+# Reload et
+sudo systemctl reload nginx
 ```
 
 ### SSL hatası
 ```bash
+# Sertifika durumu
+sudo certbot certificates
+
 # Sertifikayı yenile
-certbot renew
+sudo certbot renew
 
 # Nginx reload
-systemctl reload nginx
+sudo systemctl reload nginx
+
+# Manuel SSL yenileme
+sudo certbot --nginx -d flaxu.io -d www.flaxu.io --force-renewal
 ```
 
 ### Database bağlantı hatası
@@ -446,51 +925,162 @@ systemctl reload nginx
 # PostgreSQL çalışıyor mu?
 docker-compose exec postgres pg_isready
 
-# Şifreyi kontrol et
-echo $DATABASE_URL
+# Database logs
+docker-compose logs postgres
+
+# .env dosyasını kontrol et
+cat .env | grep DATABASE_URL
+
+# Container'a bağlan
+docker-compose exec postgres psql -U flaxu_user -d flaxu_db
+```
+
+### Frontend PM2 Hatası
+```bash
+# PM2 status
+pm2 status
+
+# PM2 logs
+pm2 logs flaxu-frontend
+
+# Restart
+pm2 restart flaxu-frontend
+
+# Delete ve yeniden başlat
+pm2 delete flaxu-frontend
+cd /var/www/flaxu/frontend
+pm2 start npm --name "flaxu-frontend" -- start
+```
+
+### Disk Alanı Doldu
+```bash
+# Disk kullanımı
+df -h
+
+# Docker volumes temizle
+docker system prune -a --volumes
+
+# Eski logları temizle
+sudo journalctl --vacuum-time=7d
+
+# Nginx logs
+sudo truncate -s 0 /var/log/nginx/access.log
+sudo truncate -s 0 /var/log/nginx/error.log
+```
+
+### RAM Yetersiz
+```bash
+# RAM kontrolü
+free -h
+
+# Swap ekle (4GB)
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+### DNS Çalışmıyor
+```bash
+# DNS propagation kontrol (online)
+# https://dnschecker.org
+
+# Local DNS test
+dig flaxu.io
+dig api.flaxu.io
+
+# DNS cache temizle (bilgisayarında)
+# Mac: sudo dscacheutil -flushcache
+# Windows: ipconfig /flushdns
+# Linux: sudo systemd-resolve --flush-caches
+```
+
+### Mevcut Siteler Çalışmıyor
+```bash
+# Tüm Nginx site config'lerini kontrol et
+sudo nginx -t
+
+# Nginx ana config
+sudo nano /etc/nginx/nginx.conf
+
+# Diğer sitelerin config'i
+ls -la /etc/nginx/sites-enabled/
+
+# Her birini test et
+curl -I http://site1.com
+curl -I http://site2.com
+curl -I http://flaxu.io
+
+# Problem varsa Nginx restart
+sudo systemctl restart nginx
 ```
 
 ---
 
-## 📝 Hızlı Başlangıç (Özet)
+## 📝 Hızlı Başlangıç (Özet - Amazon EC2)
 
 ```bash
-# 1. VPS satın al (Hetzner)
-# 2. SSH ile bağlan
-ssh root@YOUR_VPS_IP
+# 1. SSH ile mevcut VPS'e bağlan
+ssh ubuntu@YOUR_AMAZON_VPS_IP
 
-# 3. Kurulum script'i çalıştır
+# 2. Sistem kontrolü
+free -h && df -h && docker --version
+
+# 3. Gerekli paketleri kur (yoksa)
 curl -fsSL https://get.docker.com | sh
-apt install nginx certbot python3-certbot-nginx git -y
+sudo apt install nginx certbot python3-certbot-nginx git npm -y
+sudo npm install -g pm2
 
-# 4. Projeyi klonla
-cd /opt && git clone YOUR_REPO
-cd flaxu
+# 4. AWS Security Group'ta port aç
+# AWS Console → EC2 → Security Groups
+# Inbound: 80, 443 (0.0.0.0/0)
 
-# 5. .env oluştur ve doldur
+# 5. Projeyi klonla
+cd /var/www
+sudo git clone https://github.com/omrkrr44/flaxu.git
+sudo chown -R $USER:$USER flaxu
+cd flaxu && git checkout claude/crypto-trading-app-KTgle
+
+# 6. .env oluştur (secrets oluştur)
 nano .env
+# openssl rand -hex 32, openssl rand -base64 32
 
-# 6. Docker başlat
-docker-compose up -d
+# 7. Frontend build
+cd frontend && npm install && npm run build
 
-# 7. Nginx config
-nano /etc/nginx/sites-available/flaxu-api
-ln -s /etc/nginx/sites-available/flaxu-api /etc/nginx/sites-enabled/
+# 8. Docker servisleri başlat
+cd .. && docker-compose up -d postgres redis backend python-signals
 
-# 8. SSL kur
-certbot --nginx -d api.flaxu.io
+# 9. Database migration
+docker-compose exec backend npx prisma migrate deploy
+docker-compose exec backend npx prisma generate
 
-# 9. DNS ayarları yap (domain panelinde)
-# A record: api.flaxu.io → VPS_IP
+# 10. Frontend PM2 ile başlat
+cd frontend && pm2 start npm --name "flaxu-frontend" -- start
+pm2 save && pm2 startup
 
-# 10. Vercel'e deploy (frontend)
-# GitHub'dan import et
+# 11. Nginx config
+sudo nano /etc/nginx/sites-available/flaxu.io
+sudo nano /etc/nginx/sites-available/api.flaxu.io
+sudo ln -s /etc/nginx/sites-available/flaxu.io /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/api.flaxu.io /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
 
-# 11. Test et
+# 12. SSL kur
+sudo certbot --nginx -d flaxu.io -d www.flaxu.io
+sudo certbot --nginx -d api.flaxu.io
+
+# 13. DNS ayarları (domain panelinde)
+# A record: @ → AMAZON_VPS_IP
+# A record: www → AMAZON_VPS_IP
+# A record: api → AMAZON_VPS_IP
+
+# 14. Test et (DNS propagation 5-10 dakika sürebilir)
 curl https://api.flaxu.io/health
-curl https://flaxu.io
+curl -I https://flaxu.io
 
-# ✅ HAZIR!
+# ✅ HAZIR! Mevcut sitelerin yanında FLAXU da çalışıyor 🎉
 ```
 
 ---
