@@ -8,6 +8,46 @@
 
 ---
 
+## 📁 VPS Dosya Yapısı (Amazon EC2)
+
+Proje `/var/www/flaxu` dizinine kurulacak:
+
+```
+/var/www/
+├── flaxu/                          # FLAXU projesi (yeni)
+│   ├── backend/                    # Express.js backend
+│   │   ├── src/                    # Kaynak kodlar
+│   │   ├── prisma/                 # Database schema
+│   │   └── Dockerfile              # Backend container
+│   ├── frontend/                   # Next.js frontend
+│   │   ├── src/                    # React components
+│   │   ├── .next/                  # Production build (PM2 ile serve edilir)
+│   │   └── Dockerfile              # Frontend container
+│   ├── python-signals/             # Python AI servisi
+│   ├── docker-compose.yml          # Servis orchestration
+│   └── .env                        # Production secrets
+│
+├── site1/                          # Mevcut site 1
+└── site2/                          # Mevcut site 2
+
+/etc/nginx/sites-enabled/
+├── site1.com                       # Mevcut site 1 config
+├── site2.com                       # Mevcut site 2 config
+├── flaxu.io -> sites-available/   # FLAXU frontend (yeni)
+└── api.flaxu.io -> sites-available/# FLAXU API (yeni)
+```
+
+**GitHub Token ile Erişim:**
+```bash
+# Clone
+git clone https://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@github.com/omrkrr44/flaxu.git
+
+# Pull (güncellemeler için)
+git pull https://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@github.com/omrkrr44/flaxu.git claude/crypto-trading-app-KTgle
+```
+
+---
+
 ## 📋 Gerekli Adımlar
 
 ### Adım 1: Hosting Seçimi
@@ -146,11 +186,14 @@ Custom TCP  | TCP      | 3000       | 127.0.0.1   | Frontend (local only)
 sudo mkdir -p /var/www
 cd /var/www
 
-# FLAXU'yu klonla
-sudo git clone https://github.com/omrkrr44/flaxu.git
+# FLAXU'yu klonla (GitHub token ile)
+sudo git clone https://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@github.com/omrkrr44/flaxu.git
 sudo chown -R $USER:$USER flaxu
 cd flaxu
 git checkout claude/crypto-trading-app-KTgle
+
+# Güncellemeler için git pull
+git pull https://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@github.com/omrkrr44/flaxu.git claude/crypto-trading-app-KTgle
 ```
 
 **B. Production .env Oluştur:**
@@ -466,6 +509,82 @@ curl -I https://flaxu.io
 
 ---
 
+## 🔄 Proje Güncelleme (Update/Pull)
+
+Kod güncellendiğinde VPS'te projeyi güncellemek için:
+
+**A. Backend Güncellemesi:**
+```bash
+# VPS'e bağlan
+ssh ubuntu@YOUR_AMAZON_VPS_IP
+
+# Proje dizinine git
+cd /var/www/flaxu
+
+# Güncellemeleri çek (GitHub token ile)
+git pull https://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@github.com/omrkrr44/flaxu.git claude/crypto-trading-app-KTgle
+
+# Backend'i yeniden başlat
+cd /var/www/flaxu
+docker-compose restart backend
+
+# Migration varsa çalıştır
+docker-compose exec backend npx prisma migrate deploy
+docker-compose exec backend npx prisma generate
+
+# Logları kontrol et
+docker-compose logs -f backend
+```
+
+**B. Frontend Güncellemesi:**
+```bash
+# Frontend dizinine git
+cd /var/www/flaxu/frontend
+
+# Güncellemeleri çek
+git pull https://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@github.com/omrkrr44/flaxu.git claude/crypto-trading-app-KTgle
+
+# Node modules güncelle (gerekirse)
+npm install
+
+# Yeniden build
+npm run build
+
+# PM2'yi restart et
+pm2 restart flaxu-frontend
+
+# Logları kontrol et
+pm2 logs flaxu-frontend
+```
+
+**C. Hızlı Güncelleme (Tek Komut):**
+```bash
+cd /var/www/flaxu && \
+git pull https://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@github.com/omrkrr44/flaxu.git claude/crypto-trading-app-KTgle && \
+docker-compose restart backend && \
+cd frontend && npm install && npm run build && pm2 restart flaxu-frontend && \
+cd .. && docker-compose logs --tail=50 backend
+```
+
+**D. Database Schema Değişikliği Varsa:**
+```bash
+cd /var/www/flaxu
+
+# Önce backup al
+docker-compose exec postgres pg_dump -U flaxu_user flaxu_db > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Güncellemeleri çek
+git pull https://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@github.com/omrkrr44/flaxu.git claude/crypto-trading-app-KTgle
+
+# Migration çalıştır
+docker-compose exec backend npx prisma migrate deploy
+
+# Backend restart
+docker-compose restart backend
+```
+
+---
+
 ## 🚀 Production Deployment (Option B - Vercel + Amazon EC2)
 
 ### 1. Frontend'i Vercel'e Deploy Et
@@ -538,8 +657,9 @@ apt install nginx certbot python3-certbot-nginx -y
 
 **D. Projeyi Klonla:**
 ```bash
-cd /opt
-git clone https://github.com/YOUR_USERNAME/flaxu.git
+cd /var/www
+sudo git clone https://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@github.com/omrkrr44/flaxu.git
+sudo chown -R $USER:$USER flaxu
 cd flaxu
 git checkout claude/crypto-trading-app-KTgle
 ```
@@ -1036,9 +1156,9 @@ sudo npm install -g pm2
 # AWS Console → EC2 → Security Groups
 # Inbound: 80, 443 (0.0.0.0/0)
 
-# 5. Projeyi klonla
+# 5. Projeyi klonla (GitHub token ile)
 cd /var/www
-sudo git clone https://github.com/omrkrr44/flaxu.git
+sudo git clone https://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@github.com/omrkrr44/flaxu.git
 sudo chown -R $USER:$USER flaxu
 cd flaxu && git checkout claude/crypto-trading-app-KTgle
 
