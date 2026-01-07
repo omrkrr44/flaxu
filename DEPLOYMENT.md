@@ -461,33 +461,296 @@ curl https://api.flaxu.io/health
 
 ---
 
-### 8. DNS Ayarları
+### 8. Domain Bağlama (Fastcomet cPanel → AWS EC2)
 
-**A. Domain Panel'ine Git**
-(Domain sağlayıcın - GoDaddy, Namecheap, Cloudflare vb.)
+#### Option 1: cPanel DNS Yönetimi (Önerilen - Kolay)
 
-**B. A Record'ları Ekle:**
+**A. Fastcomet cPanel'e Giriş Yap:**
 ```
-Type  | Name          | Value                  | TTL
-------|---------------|------------------------|-----
-A     | @             | YOUR_AMAZON_VPS_IP     | Auto
-A     | www           | YOUR_AMAZON_VPS_IP     | Auto
-A     | api           | YOUR_AMAZON_VPS_IP     | Auto
+1. https://my.fastcomet.com → Login
+2. "Services" → "My Services"
+3. Domain'ini seç (flaxu.io)
+4. "Manage" butonuna tıkla
 ```
 
-**C. DNS Propagation Kontrol:**
-```bash
-# Linux/Mac'te
-dig flaxu.io
-dig api.flaxu.io
+**B. DNS Zone Editor'e Git:**
+```
+cPanel Dashboard → "Zone Editor" (veya "Advanced DNS Zone Editor")
+```
 
-# Online araç
-# https://dnschecker.org
+**C. Mevcut DNS Kayıtlarını Kontrol Et:**
+```
+Domain: flaxu.io seç
+Mevcut A record'ları göreceksin
+```
+
+**D. Yeni A Record'ları Ekle:**
+
+**1. Root Domain (flaxu.io):**
+```
+Type: A
+Name: @ (veya boş bırak)
+Address/Value: YOUR_AMAZON_VPS_IP (AWS Elastic IP)
+TTL: 14400 (4 saat) veya Auto
+```
+
+**2. WWW Subdomain (www.flaxu.io):**
+```
+Type: A
+Name: www
+Address/Value: YOUR_AMAZON_VPS_IP
+TTL: 14400
+```
+
+**3. API Subdomain (api.flaxu.io):**
+```
+Type: A
+Name: api
+Address/Value: YOUR_AMAZON_VPS_IP
+TTL: 14400
+```
+
+**E. Eski Kayıtları Sil (Önemli!):**
+```
+Eğer domain Fastcomet sunucusuna işaret eden eski A record'lar varsa:
+- Eski A record'ları sil (Fastcomet IP'si olanları)
+- Sadece yeni eklediğin AWS IP'li kayıtları bırak
+```
+
+**F. Kaydet ve Bekle:**
+```
+"Save" veya "Add Record" → DNS propagation 5-30 dakika sürebilir
 ```
 
 ---
 
-### 9. Test Et
+#### Option 2: Nameserver Değişikliği (Cloudflare için - İleri Seviye)
+
+Eğer Cloudflare gibi DNS yönetimi kullanmak istersen:
+
+**A. Cloudflare Hesabı Oluştur:**
+```
+1. https://dash.cloudflare.com/sign-up
+2. "Add a Site" → flaxu.io yaz
+3. Free plan seç
+```
+
+**B. Cloudflare Nameserver'ları Al:**
+```
+Cloudflare sana 2 nameserver verecek:
+- alexa.ns.cloudflare.com
+- brad.ns.cloudflare.com
+```
+
+**C. Fastcomet'te Nameserver Değiştir:**
+```
+1. Fastcomet Client Area → Domains → Manage
+2. "Nameservers" sekmesi
+3. "Use Custom Nameservers" seç
+4. Cloudflare'in verdiği 2 nameserver'ı gir
+5. Save → 24-48 saat bekle (genelde 1-2 saatte tamamlanır)
+```
+
+**D. Cloudflare'de DNS Ayarları:**
+```
+Cloudflare Dashboard → DNS → Records
+
+A | @ | YOUR_AMAZON_VPS_IP | Proxied ☁️ (veya DNS only)
+A | www | YOUR_AMAZON_VPS_IP | Proxied ☁️
+A | api | YOUR_AMAZON_VPS_IP | DNS only ⚠️
+
+NOT: API subdomain için "DNS only" kullan (Proxied değil)
+```
+
+---
+
+#### AWS Elastic IP Almak (Önemli!)
+
+Domain eklemeden önce AWS'de sabit IP al:
+
+**A. AWS Console → EC2 → Elastic IPs:**
+```
+1. "Allocate Elastic IP address" tıkla
+2. "Allocate" → Yeni IP oluştur
+3. IP'yi not al (örn: 54.123.45.67)
+```
+
+**B. Elastic IP'yi VPS'e Bağla:**
+```
+1. Yeni oluşturduğun Elastic IP'yi seç
+2. "Actions" → "Associate Elastic IP address"
+3. Instance: VPS'ini seç
+4. "Associate" tıkla
+```
+
+**C. VPS'in Yeni IP'sini Kontrol Et:**
+```bash
+# VPS'e SSH ile bağlan
+ssh ubuntu@NEW_ELASTIC_IP
+
+# Public IP'yi kontrol et
+curl ifconfig.me
+# Çıktı: NEW_ELASTIC_IP olmalı
+```
+
+**⚠️ ÖNEMLİ:**
+- Elastic IP kullanmazsan AWS her restart'ta IP değiştirir!
+- Domain'i eklemeden önce mutlaka Elastic IP al ve VPS'e bağla
+- Elastic IP ücretsizdir (VPS'e bağlıysa)
+
+---
+
+#### DNS Propagation Kontrol
+
+**A. Online Araçlar:**
+```
+https://dnschecker.org
+Domain: flaxu.io yaz → "Search" tıkla
+Dünya çapında DNS propagation durumunu gösterir
+```
+
+**B. Komut Satırı (Linux/Mac):**
+```bash
+# Root domain kontrol
+dig flaxu.io +short
+# Çıktı: YOUR_AMAZON_VPS_IP olmalı
+
+# WWW subdomain
+dig www.flaxu.io +short
+
+# API subdomain
+dig api.flaxu.io +short
+
+# Detaylı kontrol
+nslookup flaxu.io
+```
+
+**C. Windows'ta:**
+```cmd
+nslookup flaxu.io
+```
+
+**D. Bekleme Süresi:**
+```
+- En hızlı: 5-10 dakika
+- Ortalama: 30 dakika - 2 saat
+- Maksimum: 24-48 saat (nameserver değişikliğinde)
+```
+
+---
+
+#### Fastcomet cPanel Screenshot Rehberi
+
+**1. Zone Editor Bul:**
+```
+cPanel → Arama kutusuna "dns" yaz → "Zone Editor" seç
+```
+
+**2. Domain Seç:**
+```
+Dropdown'dan "flaxu.io" seç
+→ "Manage" tıkla
+```
+
+**3. A Record Ekle:**
+```
+"Add Record" butonu
+Type: A
+Name: @ (root için) veya www, api (subdomain için)
+Address: YOUR_AMAZON_VPS_IP
+TTL: 14400
+→ "Add Record"
+```
+
+**4. Kayıtları Kontrol:**
+```
+Ekledikten sonra:
+@ → YOUR_AWS_IP
+www → YOUR_AWS_IP
+api → YOUR_AWS_IP
+
+Eski kayıtlar varsa sil (Fastcomet IP'li olanlar)
+```
+
+---
+
+#### Sorun Giderme
+
+**DNS kayıtları değişmiyor:**
+```bash
+# DNS cache temizle (bilgisayarında)
+# Mac
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder
+
+# Windows
+ipconfig /flushdns
+
+# Linux
+sudo systemd-resolve --flush-caches
+
+# Tarayıcı cache temizle
+Chrome: Ctrl+Shift+Delete → "Cached images and files"
+```
+
+**Domain hala Fastcomet'e gidiyor:**
+```
+1. cPanel'de eski A record'ları sildiğinden emin ol
+2. Fastcomet'in "Parking Page" veya "Default Page" varsa kaldır
+3. DNS propagation'ı bekle (dnschecker.org ile kontrol et)
+4. 24 saat geçtiyse Fastcomet support'a ticket aç
+```
+
+**"ERR_NAME_NOT_RESOLVED" hatası:**
+```
+1. DNS henüz yayılmadı → Bekle
+2. A record'ları doğru IP'ye işaret etmiyor → cPanel'de kontrol et
+3. AWS Elastic IP VPS'e bağlı değil → AWS Console'da kontrol et
+```
+
+**SSL sertifikası almak için:**
+```bash
+# DNS yayıldıktan SONRA (dig flaxu.io çalışıyor mu kontrol et)
+sudo certbot --nginx -d flaxu.io -d www.flaxu.io -d api.flaxu.io
+
+# Eğer hata alırsan:
+# 1. DNS tamamen yayıldı mı? → dig flaxu.io +short
+# 2. Nginx config doğru mu? → sudo nginx -t
+# 3. Port 80 açık mı? → sudo netstat -tlnp | grep 80
+```
+
+---
+
+### 9. DNS Ayarları Özet Tablosu
+
+**Fastcomet cPanel DNS Kayıtları:**
+
+```
+Type  | Name | Value                  | TTL   | Açıklama
+------|------|------------------------|-------|------------------
+A     | @    | YOUR_AMAZON_VPS_IP     | 14400 | Root domain (flaxu.io)
+A     | www  | YOUR_AMAZON_VPS_IP     | 14400 | www.flaxu.io
+A     | api  | YOUR_AMAZON_VPS_IP     | 14400 | api.flaxu.io
+```
+
+**AWS Elastic IP:**
+```
+Elastic IP: YOUR_AMAZON_VPS_IP (örn: 54.123.45.67)
+VPS Instance: i-xxxxxxxxxxxxx (senin EC2 instance)
+Status: Associated ✅
+```
+
+**DNS Propagation Kontrolü:**
+```bash
+# Her 3'ü de AWS IP'sini döndürmeli:
+dig flaxu.io +short
+dig www.flaxu.io +short
+dig api.flaxu.io +short
+```
+
+---
+
+### 10. Test Et
 
 **A. Backend Test:**
 ```bash
@@ -1152,7 +1415,12 @@ curl -fsSL https://get.docker.com | sh
 sudo apt install nginx certbot python3-certbot-nginx git npm -y
 sudo npm install -g pm2
 
-# 4. AWS Security Group'ta port aç
+# 4a. AWS Elastic IP al (İLK ADIM!)
+# AWS Console → EC2 → Elastic IPs → Allocate
+# IP'yi VPS'e bağla (Associate)
+# Bu IP'yi not al: YOUR_ELASTIC_IP
+
+# 4b. AWS Security Group'ta port aç
 # AWS Console → EC2 → Security Groups
 # Inbound: 80, 443 (0.0.0.0/0)
 
@@ -1187,16 +1455,26 @@ sudo ln -s /etc/nginx/sites-available/flaxu.io /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/api.flaxu.io /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 
-# 12. SSL kur
+# 12. Domain DNS ayarları (Fastcomet cPanel'de YAP!)
+# https://my.fastcomet.com → Login
+# Services → My Services → flaxu.io → Manage
+# cPanel → Zone Editor
+# Yeni A Record'lar ekle:
+#   Type: A, Name: @, Address: YOUR_ELASTIC_IP, TTL: 14400
+#   Type: A, Name: www, Address: YOUR_ELASTIC_IP, TTL: 14400
+#   Type: A, Name: api, Address: YOUR_ELASTIC_IP, TTL: 14400
+# Eski Fastcomet IP'li kayıtları SİL!
+# DNS propagation bekle (5-30 dakika)
+
+# 13. DNS yayıldığını kontrol et
+dig flaxu.io +short
+# Çıktı: YOUR_ELASTIC_IP olmalı
+
+# 14. SSL kur (DNS yayıldıktan SONRA!)
 sudo certbot --nginx -d flaxu.io -d www.flaxu.io
 sudo certbot --nginx -d api.flaxu.io
 
-# 13. DNS ayarları (domain panelinde)
-# A record: @ → AMAZON_VPS_IP
-# A record: www → AMAZON_VPS_IP
-# A record: api → AMAZON_VPS_IP
-
-# 14. Test et (DNS propagation 5-10 dakika sürebilir)
+# 15. Test et
 curl https://api.flaxu.io/health
 curl -I https://flaxu.io
 
