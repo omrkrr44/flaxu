@@ -323,7 +323,7 @@ export class AuthService {
     return jwt.sign(
       { userId, email },
       config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRATION }
+      { expiresIn: config.JWT_EXPIRATION as string }
     );
   }
 
@@ -334,7 +334,7 @@ export class AuthService {
     return jwt.sign(
       { userId, type: 'refresh' },
       config.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '7d' as string }
     );
   }
 }
