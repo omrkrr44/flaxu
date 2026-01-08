@@ -320,20 +320,22 @@ export class AuthService {
    * Generate JWT access token
    */
   private generateAccessToken(userId: string, email: string): string {
-    const options: SignOptions = {
-      expiresIn: config.JWT_EXPIRATION
-    };
-    return jwt.sign({ userId, email }, config.JWT_SECRET, options);
+    return jwt.sign(
+      { userId, email },
+      config.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
   }
 
   /**
    * Generate refresh token
    */
   private generateRefreshToken(userId: string): string {
-    const options: SignOptions = {
-      expiresIn: '7d'
-    };
-    return jwt.sign({ userId, type: 'refresh' }, config.JWT_SECRET, options);
+    return jwt.sign(
+      { userId, type: 'refresh' },
+      config.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
   }
 }
 
