@@ -1,5 +1,5 @@
 import { AccessLevel, TokenType } from '@prisma/client';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
 import config from '../config/env';
 import { hashPassword, verifyPassword, generateToken } from '../utils/encryption';
