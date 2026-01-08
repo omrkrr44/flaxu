@@ -146,47 +146,61 @@ export class BingXClient {
   }
 
   /**
-   * Get referral information using BingX Agent API
-   * Docs: https://bingx-api.github.io/docs-v3/#/en/Agent/Invitation%20code%20data
+   * Check if a user is invited by the admin (requires admin API keys)
+   * Docs: https://bingx-api.github.io/docs/#/en-us/swapV2/account-api.html#Query%20agent%20user%20information
+   * Endpoint: GET /openApi/agent/v1/account/inviteRelationCheck
    */
-  async getReferralInfo(): Promise<ReferralInfo> {
-    const cacheKey = `bingx:referral:${this.apiKey}`;
-    const cached = await cache.get<ReferralInfo>(cacheKey);
+  async checkUserInvitation(uid: string): Promise<{
+    isInvited: boolean;
+    isDirectInvitation: boolean;
+    superiorsUid: string | null;
+  }> {
+    const cacheKey = `bingx:invitation:${uid}`;
+    const cached = await cache.get<{ isInvited: boolean; isDirectInvitation: boolean; superiorsUid: string | null }>(cacheKey);
     if (cached) return cached;
 
     try {
-      // Use BingX Agent API to get inviter data
-      const response = await this.signedRequest<any>('GET', '/openApi/user/agent/inviter/code/data');
+      const response = await this.signedRequest<any>('GET', '/openApi/agent/v1/account/inviteRelationCheck', { uid });
 
-      // Response structure: { code: string, inviterUid: string, ... }
-      const inviterCode = response?.code || response?.invitationCode || null;
-      const inviterUid = response?.inviterUid || response?.uid || null;
+      const isInvited = response.inviteResult === true;
+      const isDirectInvitation = response.directInvitation === true;
+      const superiorsUid = response.superiorsUid ? String(response.superiorsUid) : null;
 
-      const referralInfo: ReferralInfo = {
-        referrerId: inviterUid,
-        referralChain: inviterUid ? [inviterUid] : [],
-        isDirectReferral: inviterCode === config.BINGX_REFERRER_ID || inviterUid === config.BINGX_REFERRER_ID,
-        isIndirectReferral: false, // BingX doesn't provide indirect referral data
+      const result = {
+        isInvited,
+        isDirectInvitation,
+        superiorsUid,
       };
 
-      logger.info(`BingX Referral Info - Inviter Code: "${inviterCode}" | Inviter UID: "${inviterUid}"`);
+      logger.info(`BingX Invitation Check - UID: ${uid} | Invited: ${isInvited} | Direct: ${isDirectInvitation} | Inviter UID: ${superiorsUid}`);
 
-      // Cache for 1 hour (referral info doesn't change often)
-      await cache.set(cacheKey, referralInfo, 3600);
+      // Cache for 1 hour (invitation relationship doesn't change)
+      await cache.set(cacheKey, result, 3600);
 
-      return referralInfo;
-    } catch (error) {
-      logger.error('Failed to fetch BingX referral info', error);
+      return result;
+    } catch (error: any) {
+      logger.error(`Failed to check BingX invitation for UID ${uid}:`, error.response?.data || error.message);
 
-      // If API endpoint doesn't exist or fails, return default
-      // In production, you need to implement proper referral checking
+      // If API fails, return default (not invited)
       return {
-        referrerId: undefined,
-        referralChain: [],
-        isDirectReferral: false,
-        isIndirectReferral: false,
+        isInvited: false,
+        isDirectInvitation: false,
+        superiorsUid: null,
       };
     }
+  }
+
+  /**
+   * Get referral information (deprecated - kept for backward compatibility)
+   */
+  async getReferralInfo(): Promise<ReferralInfo> {
+    // This method is no longer used - BingX Agent API doesn't support querying from user perspective
+    return {
+      referrerId: undefined,
+      referralChain: [],
+      isDirectReferral: false,
+      isIndirectReferral: false,
+    };
   }
 
   /**

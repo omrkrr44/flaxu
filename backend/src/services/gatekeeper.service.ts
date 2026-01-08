@@ -92,22 +92,54 @@ export class GatekeeperService {
         };
       }
 
-      // For regular users: only check balance (BingX Agent API doesn't support querying inviter from user perspective)
-      // All users who register through the referral link and have sufficient balance get FULL access
+      // For regular users: check referral status using admin API key
+      // Create admin BingX client to check if user is in our referral network
+      const adminBingXClient = new BingXClient({
+        apiKey: config.BINGX_API_KEY,
+        secretKey: config.BINGX_SECRET_KEY,
+      });
 
-      // Check wallet balance
+      // Check invitation status using admin API
+      const invitationCheck = await adminBingXClient.checkUserInvitation(userUid);
+
+      // Verify the user is our referral
+      const isOurReferral = invitationCheck.isInvited &&
+                           invitationCheck.superiorsUid === referrerUid;
+
+      if (!isOurReferral) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            isDirectReferral: false,
+            isIndirectReferral: false,
+            accessLevel: AccessLevel.LIMITED,
+          },
+        });
+
+        return {
+          status: 'NOT_REFERRAL',
+          accessLevel: AccessLevel.LIMITED,
+          message: 'You are not in our referral network. Please sign up using our referral link: https://iciclebridge.com/invite/7NJ56L',
+          details: {
+            isDirectReferral: false,
+            isIndirectReferral: false,
+          },
+        };
+      }
+
+      // Check wallet balance using user's API keys
       const accountBalance = await bingxClient.getAccountBalance();
       const totalBalance = accountBalance.totalWalletBalance;
 
-      logger.info(`Balance Check - User: "${userUid}" | Balance: $${totalBalance} | Required: $${MINIMUM_BALANCE}`);
+      logger.info(`Balance Check - User: "${userUid}" | Referral: ✓ | Balance: $${totalBalance} | Required: $${MINIMUM_BALANCE}`);
 
       if (totalBalance < MINIMUM_BALANCE) {
         // Update user with low balance
         await prisma.user.update({
           where: { id: userId },
           data: {
-            isDirectReferral: false,
-            isIndirectReferral: false,
+            isDirectReferral: invitationCheck.isDirectInvitation,
+            isIndirectReferral: !invitationCheck.isDirectInvitation && isOurReferral,
             walletBalance: totalBalance,
             lastBalanceCheck: new Date(),
             accessLevel: AccessLevel.LIMITED,
@@ -119,8 +151,8 @@ export class GatekeeperService {
           accessLevel: AccessLevel.LIMITED,
           message: `Wallet balance ($${totalBalance.toFixed(2)}) is below minimum requirement. Please deposit at least $${MINIMUM_BALANCE}.`,
           details: {
-            isDirectReferral: false,
-            isIndirectReferral: false,
+            isDirectReferral: invitationCheck.isDirectInvitation,
+            isIndirectReferral: !invitationCheck.isDirectInvitation && isOurReferral,
             walletBalance: totalBalance,
             required: MINIMUM_BALANCE,
           },
@@ -133,8 +165,8 @@ export class GatekeeperService {
       await prisma.user.update({
         where: { id: userId },
         data: {
-          isDirectReferral: true, // Assumed true if they have valid API keys and sufficient balance
-          isIndirectReferral: false,
+          isDirectReferral: invitationCheck.isDirectInvitation,
+          isIndirectReferral: !invitationCheck.isDirectInvitation && isOurReferral,
           walletBalance: totalBalance,
           lastBalanceCheck: new Date(),
           accessLevel: AccessLevel.FULL,
@@ -143,7 +175,7 @@ export class GatekeeperService {
 
       // Log access upgrade
       if (previousAccessLevel !== AccessLevel.FULL) {
-        logger.info(`User ${user.email} access upgraded to FULL (UID: ${userUid}, Balance: $${totalBalance})`);
+        logger.info(`User ${user.email} access upgraded to FULL (UID: ${userUid}, Direct: ${invitationCheck.isDirectInvitation}, Balance: $${totalBalance})`);
       }
 
       return {
@@ -151,8 +183,8 @@ export class GatekeeperService {
         accessLevel: AccessLevel.FULL,
         message: 'Access granted. Welcome to FLAXU!',
         details: {
-          isDirectReferral: true,
-          isIndirectReferral: false,
+          isDirectReferral: invitationCheck.isDirectInvitation,
+          isIndirectReferral: !invitationCheck.isDirectInvitation && isOurReferral,
           walletBalance: totalBalance,
         },
       };
