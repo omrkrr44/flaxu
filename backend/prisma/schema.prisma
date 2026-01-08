@@ -22,6 +22,7 @@ model User {
   // BingX API Keys (encrypted with AES-256-GCM)
   bingxApiKey        String?     @db.Text
   bingxSecretKey     String?     @db.Text
+  bingxUid           String?     // BingX User ID for referral verification
 
   // Verification & Status
   isVerified         Boolean     @default(false)

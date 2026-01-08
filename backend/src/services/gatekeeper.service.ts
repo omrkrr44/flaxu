@@ -33,12 +33,12 @@ export class GatekeeperService {
       throw new AppError('User not found', 404);
     }
 
-    // Check if API keys are set
-    if (!user.bingxApiKey || !user.bingxSecretKey) {
+    // Check if API keys and UID are set
+    if (!user.bingxApiKey || !user.bingxSecretKey || !user.bingxUid) {
       return {
         status: 'INVALID_API_KEYS',
         accessLevel: AccessLevel.LIMITED,
-        message: 'Please connect your BingX API keys to continue',
+        message: 'Please connect your BingX API keys and UID to continue',
       };
     }
 
@@ -60,10 +60,19 @@ export class GatekeeperService {
         };
       }
 
-      // Check referral status
-      const referralInfo = await bingxClient.getReferralInfo();
+      // Direct UID check - if user's UID matches our referrer ID, grant full access
+      const isReferrerAccount = user.bingxUid === config.BINGX_REFERRER_ID;
 
-      if (!referralInfo.isDirectReferral && !referralInfo.isIndirectReferral) {
+      // Check referral status via API (fallback if not referrer account)
+      const referralInfo = !isReferrerAccount ? await bingxClient.getReferralInfo() : {
+        isDirectReferral: true,
+        isIndirectReferral: false,
+      };
+
+      const isDirectReferral = isReferrerAccount || referralInfo.isDirectReferral;
+      const isIndirectReferral = !isReferrerAccount && referralInfo.isIndirectReferral;
+
+      if (!isDirectReferral && !isIndirectReferral) {
         // Update user referral status
         await prisma.user.update({
           where: { id: userId },
@@ -156,7 +165,8 @@ export class GatekeeperService {
   async updateApiKeys(
     userId: string,
     apiKey: string,
-    secretKey: string
+    secretKey: string,
+    uid: string
   ): Promise<{ message: string }> {
     // Test API keys first
     const bingxClient = new BingXClient({ apiKey, secretKey });
@@ -176,15 +186,16 @@ export class GatekeeperService {
       data: {
         bingxApiKey: encryptedApiKey,
         bingxSecretKey: encryptedSecretKey,
+        bingxUid: uid,
       },
     });
 
-    logger.info(`API keys updated for user ${userId}`);
+    logger.info(`API keys and UID updated for user ${userId}`);
 
     // Run gatekeeper check immediately after updating keys
     await this.checkAccess(userId);
 
-    return { message: 'BingX API keys updated successfully' };
+    return { message: 'BingX API keys and UID updated successfully' };
   }
 
   /**

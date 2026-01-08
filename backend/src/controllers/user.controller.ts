@@ -8,6 +8,7 @@ import { AppError } from '../middleware/errorHandler';
 const updateApiKeysSchema = z.object({
   apiKey: z.string().min(1, 'API key is required'),
   secretKey: z.string().min(1, 'Secret key is required'),
+  uid: z.string().min(1, 'BingX UID is required'),
 });
 
 export class UserController {
@@ -53,7 +54,8 @@ export class UserController {
       const result = await gatekeeperService.updateApiKeys(
         req.user.id,
         validated.apiKey,
-        validated.secretKey
+        validated.secretKey,
+        validated.uid
       );
 
       res.json({ success: true, data: result });
