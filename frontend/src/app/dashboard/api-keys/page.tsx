@@ -12,6 +12,7 @@ export default function ApiKeysPage() {
   const { refreshUser } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
+  const [uid, setUid] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<any>(null);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -37,10 +38,11 @@ export default function ApiKeysPage() {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.updateApiKeys(apiKey, secretKey);
+      const response = await apiClient.updateApiKeys(apiKey, secretKey, uid);
       setMessage({ type: 'success', text: response.data.message });
       setApiKey('');
       setSecretKey('');
+      setUid('');
       await loadStatus();
       await refreshUser();
 
@@ -175,6 +177,16 @@ export default function ApiKeysPage() {
                 disabled={isLoading}
               />
 
+              <Input
+                type="text"
+                label="BingX UID"
+                placeholder="Enter your BingX User ID"
+                value={uid}
+                onChange={(e) => setUid(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+
               <div className="flex gap-2">
                 <Button
                   type="submit"
@@ -201,16 +213,17 @@ export default function ApiKeysPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>How to Get BingX API Keys</CardTitle>
+            <CardTitle>How to Get BingX API Keys & UID</CardTitle>
           </CardHeader>
           <CardContent className="prose prose-invert max-w-none">
             <ol className="text-sm space-y-2">
               <li>Log in to your BingX account</li>
+              <li>Find your <strong>UID</strong> in your account profile (top right corner)</li>
               <li>Go to <strong>API Management</strong> in your account settings</li>
               <li>Click <strong>Create API</strong></li>
               <li>Enable <strong>Futures Trading</strong> permission</li>
               <li>Set IP restrictions for security (optional but recommended)</li>
-              <li>Copy your API Key and Secret Key</li>
+              <li>Copy your API Key, Secret Key, and UID</li>
               <li>Paste them in the form above</li>
             </ol>
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500 rounded">

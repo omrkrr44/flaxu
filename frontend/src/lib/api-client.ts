@@ -102,8 +102,8 @@ class ApiClient {
     return data;
   }
 
-  async updateApiKeys(apiKey: string, secretKey: string) {
-    const { data } = await this.client.post('/api/users/api-keys', { apiKey, secretKey });
+  async updateApiKeys(apiKey: string, secretKey: string, uid: string) {
+    const { data } = await this.client.post('/api/users/api-keys', { apiKey, secretKey, uid });
     return data;
   }
 
