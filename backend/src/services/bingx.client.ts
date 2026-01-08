@@ -88,7 +88,7 @@ export class BingXClient {
     includeApiKeyInParams: boolean = false
   ): Promise<T> {
     const timestamp = Date.now();
-    const requestParams = {
+    const requestParams: Record<string, any> = {
       ...params,
       timestamp,
     };
