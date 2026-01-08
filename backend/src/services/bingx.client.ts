@@ -160,6 +160,8 @@ export class BingXClient {
     if (cached) return cached;
 
     try {
+      logger.info(`Checking BingX invitation for UID: ${uid} using admin API key: ${this.apiKey.substring(0, 10)}...`);
+
       const response = await this.signedRequest<any>('GET', '/openApi/agent/v1/account/inviteRelationCheck', { uid });
 
       const isInvited = response.inviteResult === true;
@@ -179,10 +181,13 @@ export class BingXClient {
 
       return result;
     } catch (error: any) {
-      const errorDetails = error.response?.data || error.message || 'Unknown error';
-      const statusCode = error.response?.status || 'N/A';
-      logger.error(`Failed to check BingX invitation for UID ${uid} - Status: ${statusCode} - Error:`, errorDetails);
-      logger.error(`Full error object:`, JSON.stringify(error, null, 2));
+      logger.error(`Failed to check BingX invitation for UID ${uid}`);
+      logger.error(`Error type: ${typeof error}, constructor: ${error?.constructor?.name}`);
+      logger.error(`Error message: ${error?.message || 'NO MESSAGE'}`);
+      logger.error(`Error code: ${error?.code || 'NO CODE'}`);
+      logger.error(`HTTP status: ${error?.response?.status || 'NO STATUS'}`);
+      logger.error(`Response data: ${JSON.stringify(error?.response?.data) || 'NO DATA'}`);
+      logger.error(`Stack trace: ${error?.stack || 'NO STACK'}`);
 
       // If API fails, return default (not invited)
       return {
