@@ -14,6 +14,9 @@ import userRoutes from './routes/user.routes';
 
 const app = express();
 
+// Trust proxy for Nginx reverse proxy
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
