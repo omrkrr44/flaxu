@@ -1,9 +1,15 @@
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
 
-# Install dependencies for native modules and OpenSSL 1.1 for Prisma
-RUN apk add --no-cache python3 make g++ openssl1.1-compat
+# Install dependencies for Prisma and native modules
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
