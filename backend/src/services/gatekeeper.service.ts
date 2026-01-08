@@ -62,7 +62,13 @@ export class GatekeeperService {
       }
 
       // Direct UID check - if user's UID matches our referrer ID, grant full access
-      const isReferrerAccount = user.bingxUid === config.BINGX_REFERRER_ID;
+      // Normalize UIDs for comparison (trim whitespace, convert to string)
+      const userUid = String(user.bingxUid || '').trim();
+      const referrerUid = String(config.BINGX_REFERRER_ID || '').trim();
+      const isReferrerAccount = userUid.length > 0 && userUid === referrerUid;
+
+      // Debug log for UID comparison
+      logger.info(`UID Comparison - User: "${userUid}" | Referrer: "${referrerUid}" | Match: ${isReferrerAccount}`);
 
       // Check referral status via API (fallback if not referrer account)
       const referralInfo = !isReferrerAccount ? await bingxClient.getReferralInfo() : {
