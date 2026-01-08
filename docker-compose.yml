@@ -60,6 +60,7 @@ services:
       BINGX_SECRET_KEY: ${BINGX_SECRET_KEY}
       BINGX_REFERRER_ID: ${BINGX_REFERRER_ID}
       BINGX_API_URL: ${BINGX_API_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
       PORT: 4000
     volumes:
       - ./backend:/app
