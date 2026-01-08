@@ -61,6 +61,12 @@ services:
       BINGX_REFERRER_ID: ${BINGX_REFERRER_ID}
       BINGX_API_URL: ${BINGX_API_URL}
       CORS_ORIGINS: ${CORS_ORIGINS}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
       PORT: 4000
     volumes:
       - ./backend:/app

@@ -21,7 +21,8 @@ class EmailService {
    * Send email verification
    */
   async sendVerificationEmail(email: string, token: string): Promise<void> {
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+    const frontendUrl = process.env.FRONTEND_URL || process.env.NEXTAUTH_URL || 'https://flaxu.io';
+    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
 
     const mailOptions = {
       from: config.SMTP_FROM,
@@ -77,7 +78,8 @@ class EmailService {
    * Send password reset email
    */
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    const frontendUrl = process.env.FRONTEND_URL || process.env.NEXTAUTH_URL || 'https://flaxu.io';
+    const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     const mailOptions = {
       from: config.SMTP_FROM,
