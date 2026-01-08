@@ -84,13 +84,19 @@ export class BingXClient {
   private async signedRequest<T>(
     method: 'GET' | 'POST' | 'DELETE',
     endpoint: string,
-    params: Record<string, any> = {}
+    params: Record<string, any> = {},
+    includeApiKeyInParams: boolean = false
   ): Promise<T> {
     const timestamp = Date.now();
     const requestParams = {
       ...params,
       timestamp,
     };
+
+    // For Agent API endpoints, include apiKey in params for signature
+    if (includeApiKeyInParams) {
+      requestParams.apiKey = this.apiKey;
+    }
 
     const signature = this.generateSignature(requestParams);
     const finalParams = {
@@ -162,7 +168,8 @@ export class BingXClient {
     try {
       logger.info(`Checking BingX invitation for UID: ${uid} using admin API key: ${this.apiKey.substring(0, 10)}...`);
 
-      const response = await this.signedRequest<any>('GET', '/openApi/agent/v1/account/inviteRelationCheck', { uid });
+      // Agent API requires apiKey in params for signature calculation
+      const response = await this.signedRequest<any>('GET', '/openApi/agent/v1/account/inviteRelationCheck', { uid }, true);
 
       const isInvited = response.inviteResult === true;
       const isDirectInvitation = response.directInvitation === true;
