@@ -179,7 +179,10 @@ export class BingXClient {
 
       return result;
     } catch (error: any) {
-      logger.error(`Failed to check BingX invitation for UID ${uid}:`, error.response?.data || error.message);
+      const errorDetails = error.response?.data || error.message || 'Unknown error';
+      const statusCode = error.response?.status || 'N/A';
+      logger.error(`Failed to check BingX invitation for UID ${uid} - Status: ${statusCode} - Error:`, errorDetails);
+      logger.error(`Full error object:`, JSON.stringify(error, null, 2));
 
       // If API fails, return default (not invited)
       return {
