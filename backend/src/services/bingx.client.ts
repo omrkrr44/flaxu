@@ -146,9 +146,8 @@ export class BingXClient {
   }
 
   /**
-   * Get referral information
-   * NOTE: This is a placeholder - actual BingX API endpoint may differ
-   * You need to verify the correct endpoint with BingX documentation
+   * Get referral information using BingX Agent API
+   * Docs: https://bingx-api.github.io/docs-v3/#/en/Agent/Invitation%20code%20data
    */
   async getReferralInfo(): Promise<ReferralInfo> {
     const cacheKey = `bingx:referral:${this.apiKey}`;
@@ -156,19 +155,21 @@ export class BingXClient {
     if (cached) return cached;
 
     try {
-      // IMPORTANT: Replace this with actual BingX referral API endpoint
-      // This is a placeholder implementation
-      const response = await this.signedRequest<any>('GET', '/openApi/user/referralInfo');
+      // Use BingX Agent API to get inviter data
+      const response = await this.signedRequest<any>('GET', '/openApi/user/agent/inviter/code/data');
 
-      const referrerId = response.referrerId || response.inviterId || null;
-      const referralChain = response.referralChain || [];
+      // Response structure: { code: string, inviterUid: string, ... }
+      const inviterCode = response?.code || response?.invitationCode || null;
+      const inviterUid = response?.inviterUid || response?.uid || null;
 
       const referralInfo: ReferralInfo = {
-        referrerId,
-        referralChain,
-        isDirectReferral: referrerId === config.BINGX_REFERRER_ID,
-        isIndirectReferral: referralChain.includes(config.BINGX_REFERRER_ID),
+        referrerId: inviterUid,
+        referralChain: inviterUid ? [inviterUid] : [],
+        isDirectReferral: inviterCode === config.BINGX_REFERRER_ID || inviterUid === config.BINGX_REFERRER_ID,
+        isIndirectReferral: false, // BingX doesn't provide indirect referral data
       };
+
+      logger.info(`BingX Referral Info - Inviter Code: "${inviterCode}" | Inviter UID: "${inviterUid}"`);
 
       // Cache for 1 hour (referral info doesn't change often)
       await cache.set(cacheKey, referralInfo, 3600);
