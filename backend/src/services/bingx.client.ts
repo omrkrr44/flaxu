@@ -107,24 +107,24 @@ export class BingXClient {
       logger.info(`Generated signature: ${signature}`);
     }
 
-    // Build final params for the request
-    const finalParams = {
-      ...signatureParams,
-      signature,
-    };
+    // Build final query string with signature (CRITICAL: maintain exact order)
+    const finalQueryString = `${sortedParamsStr}&signature=${signature}`;
+
+    // For GET requests, append query string to URL directly to preserve order
+    const requestUrl = method === 'GET' ? `${endpoint}?${finalQueryString}` : endpoint;
 
     try {
       // Debug: Log full request details for Agent API
       if (includeApiKeyInParams) {
-        logger.info(`Request URL: ${this.baseURL}${endpoint}`);
-        logger.info(`Request params: ${JSON.stringify(finalParams)}`);
+        logger.info(`Request URL: ${this.baseURL}${requestUrl}`);
+        logger.info(`Query String: ${finalQueryString}`);
       }
 
       const response = await this.axiosInstance.request({
         method,
-        url: endpoint,
-        params: method === 'GET' ? finalParams : undefined,
-        data: method !== 'GET' ? finalParams : undefined,
+        url: requestUrl,
+        // Don't use params object for GET - we manually built the query string
+        data: method !== 'GET' ? { ...signatureParams, signature } : undefined,
       });
 
       // Debug: Log response for Agent API
