@@ -48,7 +48,7 @@ export interface ArbitrageScanResult {
 // ============================================================================
 
 export class ArbitrageScannerService {
-      const ExchangeClass = (ccxt as any)[exchangeName] as any;
+  private exchanges: Map<string, any> = new Map();
   private readonly SUPPORTED_EXCHANGES = [
     'binance',
     'bybit',
@@ -309,7 +309,7 @@ export class ArbitrageScannerService {
 
     try {
       // Get markets from first exchange (usually Binance has most pairs)
-        const exchange = (ccxt as any)[exchangeName];
+      const firstExchange = this.exchanges.values().next().value as any;
       if (!firstExchange) return [];
 
       await firstExchange.loadMarkets();

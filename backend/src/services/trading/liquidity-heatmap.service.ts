@@ -63,7 +63,7 @@ export interface LiquidityLevel {
 // ============================================================================
 
 export class LiquidityHeatmapService {
-        const ExchangeClass = (ccxt as any)[exchangeName] as any;
+  private exchanges: Map<string, any> = new Map();
   private readonly SUPPORTED_EXCHANGES = [
     'binance',
     'bybit',
