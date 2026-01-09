@@ -64,21 +64,6 @@ export class BingXClient {
   }
 
   /**
-   * Generate signature for BingX API
-   */
-  private generateSignature(params: Record<string, any>): string {
-    const sortedParams = Object.keys(params)
-      .sort()
-      .map(key => `${key}=${params[key]}`)
-      .join('&');
-
-    return crypto
-      .createHmac('sha256', this.secretKey)
-      .update(sortedParams)
-      .digest('hex');
-  }
-
-  /**
    * Make signed request to BingX API
    * Following BingX's official signature algorithm: sorted params + appended timestamp
    */
