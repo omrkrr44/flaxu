@@ -55,6 +55,7 @@ model User {
 enum AccessLevel {
   LIMITED    // Not verified or insufficient balance
   FULL       // Verified referral with $200+ balance
+  ADMIN      // Administrator with full system access
   SUSPENDED  // Manually suspended by admin
 }
 
