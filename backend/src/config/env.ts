@@ -25,10 +25,13 @@ interface Config {
   BINGX_API_URL: string;
   BINGX_USE_TESTNET: boolean;
 
-  // Email (SendGrid)
-  SENDGRID_API_KEY: string;
-  EMAIL_FROM: string;
-  EMAIL_REPLY_TO?: string;
+  // Email (SMTP)
+  SMTP_HOST: string;
+  SMTP_PORT: number;
+  SMTP_SECURE: boolean;
+  SMTP_USER: string;
+  SMTP_PASS: string;
+  SMTP_FROM: string;
 
   // External APIs
   COINGECKO_API_KEY?: string;
@@ -91,10 +94,13 @@ const config: Config = {
   BINGX_API_URL: process.env.BINGX_API_URL || 'https://open-api.bingx.com',
   BINGX_USE_TESTNET: process.env.BINGX_USE_TESTNET === 'true',
 
-  // Email (SendGrid)
-  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
-  EMAIL_FROM: process.env.EMAIL_FROM || 'FLAXU <noreply@flaxu.io>',
-  EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO,
+  // Email (SMTP)
+  SMTP_HOST: process.env.SMTP_HOST || 'smtp.sendgrid.net',
+  SMTP_PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+  SMTP_SECURE: process.env.SMTP_SECURE === 'true',
+  SMTP_USER: process.env.SMTP_USER || '',
+  SMTP_PASS: process.env.SMTP_PASS || '',
+  SMTP_FROM: process.env.SMTP_FROM || 'FLAXU <info@flaxu.io>',
 
   // External APIs
   COINGECKO_API_KEY: process.env.COINGECKO_API_KEY,

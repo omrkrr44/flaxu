@@ -1,39 +1,20 @@
-import sgMail from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 import config from '../config/env';
 import { logger } from '../utils/logger';
 
 class EmailService {
+  private transporter: nodemailer.Transporter;
+
   constructor() {
-    // Initialize SendGrid
-    if (config.SENDGRID_API_KEY) {
-      sgMail.setApiKey(config.SENDGRID_API_KEY);
-    } else {
-      logger.warn('SendGrid API key not configured - email functionality will be disabled');
-    }
-  }
-
-  /**
-   * Send email using SendGrid
-   */
-  private async sendEmail(to: string, subject: string, html: string): Promise<void> {
-    if (!config.SENDGRID_API_KEY) {
-      logger.warn(`Email not sent to ${to} - SendGrid not configured`);
-      return;
-    }
-
-    try {
-      await sgMail.send({
-        to,
-        from: config.EMAIL_FROM,
-        replyTo: config.EMAIL_REPLY_TO,
-        subject,
-        html,
-      });
-      logger.info(`Email sent to ${to}: ${subject}`);
-    } catch (error: any) {
-      logger.error(`Failed to send email to ${to}:`, error.response?.body || error);
-      throw error;
-    }
+    this.transporter = nodemailer.createTransport({
+      host: config.SMTP_HOST,
+      port: config.SMTP_PORT,
+      secure: config.SMTP_SECURE,
+      auth: {
+        user: config.SMTP_USER,
+        pass: config.SMTP_PASS,
+      },
+    });
   }
 
   /**
@@ -79,7 +60,20 @@ class EmailService {
         </html>
       `;
 
-    await this.sendEmail(email, 'Verify Your Email - FLAXU', html);
+    const mailOptions = {
+      from: config.SMTP_FROM,
+      to: email,
+      subject: 'Verify Your Email - FLAXU',
+      html,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      logger.info(`Verification email sent to ${email}`);
+    } catch (error) {
+      logger.error(`Failed to send verification email to ${email}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -129,7 +123,20 @@ class EmailService {
         </html>
       `;
 
-    await this.sendEmail(email, 'Reset Your Password - FLAXU', html);
+    const mailOptions = {
+      from: config.SMTP_FROM,
+      to: email,
+      subject: 'Reset Your Password - FLAXU',
+      html,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      logger.info(`Password reset email sent to ${email}`);
+    } catch (error) {
+      logger.error(`Failed to send password reset email to ${email}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -178,7 +185,20 @@ class EmailService {
         </html>
       `;
 
-    await this.sendEmail(email, 'Balance Warning - FLAXU', html);
+    const mailOptions = {
+      from: config.SMTP_FROM,
+      to: email,
+      subject: 'Balance Warning - FLAXU',
+      html,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      logger.info(`Balance warning email sent to ${email}`);
+    } catch (error) {
+      logger.error(`Failed to send balance warning email to ${email}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -224,7 +244,20 @@ class EmailService {
         </html>
       `;
 
-    await this.sendEmail(email, 'Access Level Changed - FLAXU', html);
+    const mailOptions = {
+      from: config.SMTP_FROM,
+      to: email,
+      subject: 'Access Level Changed - FLAXU',
+      html,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      logger.info(`Access downgraded email sent to ${email}`);
+    } catch (error) {
+      logger.error(`Failed to send access downgraded email to ${email}:`, error);
+      throw error;
+    }
   }
 }
 
