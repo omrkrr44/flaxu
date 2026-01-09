@@ -80,6 +80,7 @@ export class BingXClient {
 
   /**
    * Make signed request to BingX API
+   * Following BingX's official signature algorithm: sorted params + appended timestamp
    */
   private async signedRequest<T>(
     method: 'GET' | 'POST' | 'DELETE',
@@ -88,29 +89,45 @@ export class BingXClient {
     includeApiKeyInParams: boolean = false
   ): Promise<T> {
     const timestamp = Date.now();
-    const requestParams: Record<string, any> = {
-      ...params,
-      timestamp,
-    };
+
+    // Build params for signature (excluding timestamp initially)
+    const signatureParams: Record<string, any> = { ...params };
 
     // For Agent API endpoints, include apiKey in params for signature
     if (includeApiKeyInParams) {
-      requestParams.apiKey = this.apiKey;
+      signatureParams.apiKey = this.apiKey;
     }
 
-    // Debug: log params before signature
+    // Sort params (excluding timestamp) and build query string
+    const sortedKeys = Object.keys(signatureParams).sort();
+    const sortedParamsStr = sortedKeys
+      .map(key => `${key}=${signatureParams[key]}`)
+      .join('&');
+
+    // APPEND timestamp at the end (as per BingX docs - timestamp is not sorted with other params)
+    const paramsStrWithTimestamp = sortedParamsStr
+      ? `${sortedParamsStr}&timestamp=${timestamp}`
+      : `timestamp=${timestamp}`;
+
+    // Debug logging for Agent API
     if (includeApiKeyInParams) {
-      logger.info(`Signature params (sorted): ${JSON.stringify(Object.keys(requestParams).sort().map(k => `${k}=${requestParams[k]}`))}`);
+      logger.info(`Signature string: ${paramsStrWithTimestamp}`);
     }
 
-    const signature = this.generateSignature(requestParams);
+    // Generate signature from the complete params string
+    const signature = crypto
+      .createHmac('sha256', this.secretKey)
+      .update(paramsStrWithTimestamp)
+      .digest('hex');
 
     if (includeApiKeyInParams) {
       logger.info(`Generated signature: ${signature}`);
     }
 
+    // Build final params for the request
     const finalParams = {
-      ...requestParams,
+      ...signatureParams,
+      timestamp,
       signature,
     };
 
