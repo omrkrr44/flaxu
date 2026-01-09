@@ -11,6 +11,8 @@ import { startBalanceCheckJob } from './jobs/balanceCheck.job';
 // Import routes
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import tradingRoutes from './routes/trading.routes';
+import adminRoutes from './routes/admin.routes';
 
 const app = express();
 
@@ -43,6 +45,8 @@ app.get('/health', (_req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/trading', tradingRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
@@ -65,12 +69,22 @@ const startServer = async () => {
       logger.info(`📝 Environment: ${config.NODE_ENV}`);
       logger.info(`🔗 API: http://localhost:${config.PORT}`);
       logger.info(`📊 Routes:`);
-      logger.info(`   POST /api/auth/register`);
-      logger.info(`   POST /api/auth/login`);
-      logger.info(`   POST /api/auth/verify-email`);
-      logger.info(`   GET  /api/users/profile`);
-      logger.info(`   POST /api/users/api-keys`);
-      logger.info(`   POST /api/users/gatekeeper/check`);
+      logger.info(`   Auth:`);
+      logger.info(`     POST /api/auth/register`);
+      logger.info(`     POST /api/auth/login`);
+      logger.info(`     POST /api/auth/verify-email`);
+      logger.info(`   Users:`);
+      logger.info(`     GET  /api/users/profile`);
+      logger.info(`     POST /api/users/api-keys`);
+      logger.info(`     POST /api/users/gatekeeper/check`);
+      logger.info(`   Trading Bots:`);
+      logger.info(`     GET  /api/trading/ict/analyze/:symbol`);
+      logger.info(`     GET  /api/trading/sniper/analyze/:symbol`);
+      logger.info(`     GET  /api/trading/arbitrage/scan`);
+      logger.info(`     GET  /api/trading/liquidity/heatmap/:symbol`);
+      logger.info(`   Admin:`);
+      logger.info(`     GET  /api/admin/users`);
+      logger.info(`     GET  /api/admin/analytics/overview`);
     });
 
     // Graceful shutdown

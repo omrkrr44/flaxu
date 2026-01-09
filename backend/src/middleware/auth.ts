@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 import config from '../config/env';
 import { prisma } from '../config/database';
 import { AppError } from './errorHandler';
-import { AccessLevel } from '@prisma/client';
+
+type AccessLevel = 'LIMITED' | 'FULL' | 'ADMIN' | 'SUSPENDED';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -68,6 +69,26 @@ export const authenticate = async (
 };
 
 /**
+ * Require specific access level
+ */
+export const requireAccessLevel = (level: AccessLevel) => {
+  return (req: AuthRequest, _res: Response, next: NextFunction) => {
+    if (!req.user) {
+      throw new AppError('Authentication required', 401);
+    }
+
+    if (req.user.accessLevel !== level && req.user.accessLevel !== 'ADMIN') {
+      throw new AppError(
+        `Access denied: ${level} access level required`,
+        403
+      );
+    }
+
+    next();
+  };
+};
+
+/**
  * Require FULL access level (verified referral with $200+ balance)
  */
 export const requireFullAccess = (
@@ -75,7 +96,7 @@ export const requireFullAccess = (
   _res: Response,
   next: NextFunction
 ) => {
-  if (req.user?.accessLevel !== AccessLevel.FULL) {
+  if (req.user?.accessLevel !== 'FULL' && req.user?.accessLevel !== 'ADMIN') {
     throw new AppError(
       'Access denied: Please ensure you are a verified referral with minimum $200 wallet balance',
       403

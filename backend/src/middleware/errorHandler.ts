@@ -39,11 +39,13 @@ export const errorHandler = (
   }
 
   // Handle Prisma errors
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+// @ts-ignore
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
     statusCode = 400;
     code = 'DATABASE_ERROR';
 
-    switch (err.code) {
+// @ts-ignore
+            switch (err.code) {
       case 'P2002':
         message = 'A record with this value already exists';
         code = 'DUPLICATE_ENTRY';

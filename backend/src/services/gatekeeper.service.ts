@@ -1,4 +1,4 @@
-import { AccessLevel } from '@prisma/client';
+type AccessLevel = 'LIMITED' | 'FULL' | 'ADMIN' | 'SUSPENDED';
 import { prisma } from '../config/database';
 import { BingXClient } from './bingx.client';
 import { decrypt } from '../utils/encryption';
@@ -38,7 +38,7 @@ export class GatekeeperService {
     if (!user.bingxApiKey || !user.bingxSecretKey || !user.bingxUid) {
       return {
         status: 'INVALID_API_KEYS',
-        accessLevel: AccessLevel.LIMITED,
+        accessLevel: 'LIMITED',
         message: 'Please connect your BingX API keys and UID to continue',
       };
     }
@@ -56,7 +56,7 @@ export class GatekeeperService {
       if (!isConnected) {
         return {
           status: 'INVALID_API_KEYS',
-          accessLevel: AccessLevel.LIMITED,
+          accessLevel: 'LIMITED',
           message: 'Invalid BingX API keys. Please update your credentials.',
         };
       }
@@ -77,13 +77,13 @@ export class GatekeeperService {
           data: {
             isDirectReferral: true,
             isIndirectReferral: false,
-            accessLevel: AccessLevel.FULL,
+            accessLevel: 'FULL',
           },
         });
 
         return {
           status: 'APPROVED',
-          accessLevel: AccessLevel.FULL,
+          accessLevel: 'FULL',
           message: 'Access granted. Welcome to FLAXU!',
           details: {
             isDirectReferral: true,
@@ -112,13 +112,13 @@ export class GatekeeperService {
           data: {
             isDirectReferral: false,
             isIndirectReferral: false,
-            accessLevel: AccessLevel.LIMITED,
+            accessLevel: 'LIMITED',
           },
         });
 
         return {
           status: 'NOT_REFERRAL',
-          accessLevel: AccessLevel.LIMITED,
+          accessLevel: 'LIMITED',
           message: 'You are not in our referral network. Please sign up using our referral link: https://iciclebridge.com/invite/7NJ56L',
           details: {
             isDirectReferral: false,
@@ -142,13 +142,13 @@ export class GatekeeperService {
             isIndirectReferral: !invitationCheck.isDirectInvitation && isOurReferral,
             walletBalance: totalBalance,
             lastBalanceCheck: new Date(),
-            accessLevel: AccessLevel.LIMITED,
+            accessLevel: 'LIMITED',
           },
         });
 
         return {
           status: 'INSUFFICIENT_BALANCE',
-          accessLevel: AccessLevel.LIMITED,
+          accessLevel: 'LIMITED',
           message: `Wallet balance ($${totalBalance.toFixed(2)}) is below minimum requirement. Please deposit at least $${MINIMUM_BALANCE}.`,
           details: {
             isDirectReferral: invitationCheck.isDirectInvitation,
@@ -169,18 +169,18 @@ export class GatekeeperService {
           isIndirectReferral: !invitationCheck.isDirectInvitation && isOurReferral,
           walletBalance: totalBalance,
           lastBalanceCheck: new Date(),
-          accessLevel: AccessLevel.FULL,
+          accessLevel: 'FULL',
         },
       });
 
       // Log access upgrade
-      if (previousAccessLevel !== AccessLevel.FULL) {
+      if (previousAccessLevel !== 'FULL') {
         logger.info(`User ${user.email} access upgraded to FULL (UID: ${userUid}, Direct: ${invitationCheck.isDirectInvitation}, Balance: $${totalBalance})`);
       }
 
       return {
         status: 'APPROVED',
-        accessLevel: AccessLevel.FULL,
+        accessLevel: 'FULL',
         message: 'Access granted. Welcome to FLAXU!',
         details: {
           isDirectReferral: invitationCheck.isDirectInvitation,
@@ -246,7 +246,7 @@ export class GatekeeperService {
         isIndirectReferral: false,
         walletBalance: null,
         lastBalanceCheck: null,
-        accessLevel: AccessLevel.LIMITED,
+        accessLevel: 'LIMITED',
       },
     });
 
@@ -264,7 +264,7 @@ export class GatekeeperService {
 
     const users = await prisma.user.findMany({
       where: {
-        accessLevel: AccessLevel.FULL,
+        accessLevel: 'FULL',
         bingxApiKey: { not: null },
         bingxSecretKey: { not: null },
       },
@@ -299,7 +299,7 @@ export class GatekeeperService {
           // Downgrade access
           await prisma.user.update({
             where: { id: user.id },
-            data: { accessLevel: AccessLevel.LIMITED },
+            data: { accessLevel: 'LIMITED' },
           });
 
           // Send warning email

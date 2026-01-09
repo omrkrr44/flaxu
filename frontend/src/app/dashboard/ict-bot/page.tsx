@@ -1,0 +1,199 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { apiClient } from '@/lib/api-client';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+
+interface ICTSignal {
+  symbol: string;
+  timeframe: string;
+  direction: 'LONG' | 'SHORT';
+  signalType: string;
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2: number;
+  takeProfit3: number;
+  riskRewardRatio: number;
+  confidence: number;
+  trend: string;
+  volatility: number;
+}
+
+interface MultiTimeframeAnalysis {
+  symbol: string;
+  '15m': ICTSignal | null;
+  '1h': ICTSignal | null;
+  '4h': ICTSignal | null;
+  '1d': ICTSignal | null;
+  confluenceScore: number;
+  bestSignal: ICTSignal | null;
+}
+
+export default function ICTBotPage() {
+  const [symbol, setSymbol] = useState('BTC-USDT');
+  const [analysis, setAnalysis] = useState<MultiTimeframeAnalysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const analyzeSymbol = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.get(`/trading/ict/analyze/${symbol}`);
+      setAnalysis(response.data);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to analyze symbol');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    analyzeSymbol();
+  }, []);
+
+  const renderSignal = (signal: ICTSignal | null, timeframe: string) => {
+    if (!signal) {
+      return (
+        <Card className="p-4">
+          <h3 className="text-lg font-semibold mb-2">{timeframe}</h3>
+          <p className="text-gray-500">No signal</p>
+        </Card>
+      );
+    }
+
+    return (
+      <Card className={`p-4 border-2 ${signal.direction === 'LONG' ? 'border-green-500' : 'border-red-500'}`}>
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-lg font-semibold">{timeframe}</h3>
+          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+            signal.direction === 'LONG' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}>
+            {signal.direction}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Signal Type:</span>
+            <span className="font-medium">{signal.signalType}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-gray-600">Confidence:</span>
+            <span className="font-bold text-blue-600">{signal.confidence.toFixed(1)}%</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-gray-600">Entry:</span>
+            <span className="font-medium">${signal.entryPrice.toFixed(2)}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-gray-600">Stop Loss:</span>
+            <span className="font-medium text-red-600">${signal.stopLoss.toFixed(2)}</span>
+          </div>
+
+          <div className="space-y-1 mt-2 pt-2 border-t">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">TP1:</span>
+              <span className="font-medium text-green-600">${signal.takeProfit1.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">TP2:</span>
+              <span className="font-medium text-green-600">${signal.takeProfit2.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">TP3:</span>
+              <span className="font-medium text-green-600">${signal.takeProfit3.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-between mt-2 pt-2 border-t">
+            <span className="text-gray-600">R:R Ratio:</span>
+            <span className="font-bold text-purple-600">{signal.riskRewardRatio.toFixed(2)}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span className="text-gray-600">Trend:</span>
+            <span className={`font-medium ${
+              signal.trend === 'bullish' ? 'text-green-600' : signal.trend === 'bearish' ? 'text-red-600' : 'text-gray-600'
+            }`}>
+              {signal.trend.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">ICT & Price Action Bot</h1>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            placeholder="Symbol (e.g., BTC-USDT)"
+            className="px-4 py-2 border rounded-lg"
+          />
+          <Button onClick={analyzeSymbol} disabled={loading}>
+            {loading ? 'Analyzing...' : 'Analyze'}
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <Card className="p-4 bg-red-50 border-red-200">
+          <p className="text-red-600">{error}</p>
+        </Card>
+      )}
+
+      {analysis && (
+        <>
+          <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50">
+            <h2 className="text-2xl font-bold mb-4">Best Signal: {analysis.symbol}</h2>
+            {analysis.bestSignal ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-600">Timeframe</p>
+                  <p className="text-2xl font-bold">{analysis.bestSignal.timeframe}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Direction</p>
+                  <p className={`text-2xl font-bold ${
+                    analysis.bestSignal.direction === 'LONG' ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {analysis.bestSignal.direction}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Confluence Score</p>
+                  <p className="text-2xl font-bold text-blue-600">{analysis.confluenceScore.toFixed(1)}%</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Confidence</p>
+                  <p className="text-2xl font-bold text-purple-600">{analysis.bestSignal.confidence.toFixed(1)}%</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-600 text-lg">No high-confidence signal detected</p>
+            )}
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {renderSignal(analysis['15m'], '15 Minutes')}
+            {renderSignal(analysis['1h'], '1 Hour')}
+            {renderSignal(analysis['4h'], '4 Hours')}
+            {renderSignal(analysis['1d'], '1 Day')}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

@@ -34,11 +34,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
+    { name: 'ICT Bot', href: '/dashboard/ict-bot', icon: '🎯' },
+    { name: 'Arbitrage', href: '/dashboard/arbitrage', icon: '💱' },
     { name: 'API Keys', href: '/dashboard/api-keys', icon: '🔑' },
-    { name: 'Trading', href: '/dashboard/trading', icon: '📈' },
-    { name: 'Market Intel', href: '/dashboard/market', icon: '🌐' },
-    { name: 'Profile', href: '/dashboard/profile', icon: '👤' },
   ];
+
+  // Add admin link if user is admin
+  const adminNavigation = user?.accessLevel === 'ADMIN'
+    ? [{ name: 'Admin Panel', href: '/dashboard/admin', icon: '🛡️' }]
+    : [];
 
   const handleLogout = async () => {
     await logout();
@@ -58,7 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </h1>
               </Link>
               <div className="hidden md:ml-10 md:flex md:space-x-8">
-                {navigation.map((item) => (
+                {[...navigation, ...adminNavigation].map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}

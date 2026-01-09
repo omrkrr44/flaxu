@@ -1,4 +1,5 @@
-import { AccessLevel, TokenType } from '@prisma/client';
+type AccessLevel = 'LIMITED' | 'FULL' | 'ADMIN' | 'SUSPENDED';
+type TokenType = 'EMAIL_VERIFICATION' | 'PASSWORD_RESET';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database';
 import config from '../config/env';
@@ -61,7 +62,7 @@ export class AuthService {
         email,
         passwordHash,
         isVerified: false,
-        accessLevel: AccessLevel.LIMITED,
+        accessLevel: 'LIMITED',
       },
     });
 
@@ -74,7 +75,7 @@ export class AuthService {
       data: {
         email: user.email,
         token: verificationToken,
-        type: TokenType.EMAIL_VERIFICATION,
+        type: 'EMAIL_VERIFICATION',
         expiresAt,
       },
     });
@@ -110,7 +111,7 @@ export class AuthService {
       throw new AppError('Verification token expired', 400);
     }
 
-    if (verificationToken.type !== TokenType.EMAIL_VERIFICATION) {
+    if (verificationToken.type !== 'EMAIL_VERIFICATION') {
       throw new AppError('Invalid token type', 400);
     }
 
@@ -218,7 +219,7 @@ export class AuthService {
       data: {
         email: user.email,
         token: resetToken,
-        type: TokenType.PASSWORD_RESET,
+        type: 'PASSWORD_RESET',
         expiresAt,
       },
     });
@@ -251,7 +252,7 @@ export class AuthService {
       throw new AppError('Reset token expired', 400);
     }
 
-    if (resetToken.type !== TokenType.PASSWORD_RESET) {
+    if (resetToken.type !== 'PASSWORD_RESET') {
       throw new AppError('Invalid token type', 400);
     }
 
