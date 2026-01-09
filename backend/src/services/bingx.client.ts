@@ -98,7 +98,17 @@ export class BingXClient {
       requestParams.apiKey = this.apiKey;
     }
 
+    // Debug: log params before signature
+    if (includeApiKeyInParams) {
+      logger.info(`Signature params (sorted): ${JSON.stringify(Object.keys(requestParams).sort().map(k => `${k}=${requestParams[k]}`))}`);
+    }
+
     const signature = this.generateSignature(requestParams);
+
+    if (includeApiKeyInParams) {
+      logger.info(`Generated signature: ${signature}`);
+    }
+
     const finalParams = {
       ...requestParams,
       signature,
