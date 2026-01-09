@@ -114,6 +114,12 @@ export class BingXClient {
     };
 
     try {
+      // Debug: Log full request details for Agent API
+      if (includeApiKeyInParams) {
+        logger.info(`Request URL: ${this.baseURL}${endpoint}`);
+        logger.info(`Request params: ${JSON.stringify(finalParams)}`);
+      }
+
       const response = await this.axiosInstance.request({
         method,
         url: endpoint,
@@ -121,13 +127,25 @@ export class BingXClient {
         data: method !== 'GET' ? finalParams : undefined,
       });
 
+      // Debug: Log response for Agent API
+      if (includeApiKeyInParams) {
+        logger.info(`Response status: ${response.status}`);
+        logger.info(`Response data: ${JSON.stringify(response.data)}`);
+      }
+
       if (response.data.code !== 0 && response.data.code !== undefined) {
         throw new Error(`BingX API Error: ${response.data.msg || 'Unknown error'}`);
       }
 
       return response.data.data || response.data;
     } catch (error: any) {
-      logger.error(`BingX API request failed: ${endpoint}`, error.response?.data || error.message);
+      logger.error(`BingX API request failed: ${endpoint}`);
+      if (error.response) {
+        logger.error(`HTTP Status: ${error.response.status}`);
+        logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+      } else {
+        logger.error(`Error message: ${error.message}`);
+      }
       throw error;
     }
   }
