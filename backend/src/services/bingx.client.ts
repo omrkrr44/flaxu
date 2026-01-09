@@ -65,7 +65,7 @@ export class BingXClient {
 
   /**
    * Make signed request to BingX API
-   * Following BingX's official signature algorithm: sorted params + appended timestamp
+   * Following working Telegram bot algorithm: ALL params including timestamp sorted together
    */
   private async signedRequest<T>(
     method: 'GET' | 'POST' | 'DELETE',
@@ -75,34 +75,32 @@ export class BingXClient {
   ): Promise<T> {
     const timestamp = Date.now();
 
-    // Build params for signature (excluding timestamp initially)
-    const signatureParams: Record<string, any> = { ...params };
+    // Build ALL params for signature (including timestamp)
+    const signatureParams: Record<string, any> = {
+      ...params,
+      timestamp,
+    };
 
     // For Agent API endpoints, include apiKey in params for signature
     if (includeApiKeyInParams) {
       signatureParams.apiKey = this.apiKey;
     }
 
-    // Sort params (excluding timestamp) and build query string
+    // Sort ALL params (including timestamp) alphabetically and build query string
     const sortedKeys = Object.keys(signatureParams).sort();
     const sortedParamsStr = sortedKeys
       .map(key => `${key}=${signatureParams[key]}`)
       .join('&');
 
-    // APPEND timestamp at the end (as per BingX docs - timestamp is not sorted with other params)
-    const paramsStrWithTimestamp = sortedParamsStr
-      ? `${sortedParamsStr}&timestamp=${timestamp}`
-      : `timestamp=${timestamp}`;
-
     // Debug logging for Agent API
     if (includeApiKeyInParams) {
-      logger.info(`Signature string: ${paramsStrWithTimestamp}`);
+      logger.info(`Signature string: ${sortedParamsStr}`);
     }
 
-    // Generate signature from the complete params string
+    // Generate signature from the sorted params string
     const signature = crypto
       .createHmac('sha256', this.secretKey)
-      .update(paramsStrWithTimestamp)
+      .update(sortedParamsStr)
       .digest('hex');
 
     if (includeApiKeyInParams) {
@@ -112,7 +110,6 @@ export class BingXClient {
     // Build final params for the request
     const finalParams = {
       ...signatureParams,
-      timestamp,
       signature,
     };
 
