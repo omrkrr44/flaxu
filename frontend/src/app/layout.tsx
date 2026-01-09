@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import '../styles/globals.css';
 import { AuthProvider } from '@/hooks/useAuth';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'FLAXU - Ultimate Crypto Super App',
@@ -18,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <AuthProvider>
           {children}
         </AuthProvider>

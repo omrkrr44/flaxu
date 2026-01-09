@@ -6,7 +6,7 @@ import { apiClient } from '@/lib/api-client';
 interface User {
   id: string;
   email: string;
-  accessLevel: 'LIMITED' | 'FULL' | 'SUSPENDED';
+  accessLevel: 'LIMITED' | 'FULL' | 'ADMIN' | 'SUSPENDED';
   isVerified: boolean;
 }
 
