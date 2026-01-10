@@ -55,6 +55,16 @@ export class ArbitrageScannerService {
     'okx',
     'gateio',
     'kucoin',
+    'coinbase',
+    'kraken',
+    'bitfinex',
+    'huobi',
+    'mexc',
+    'bitget',
+    'cryptocom',
+    'bingx',
+    'htx',
+    'phemex',
   ];
 
   private readonly MIN_PROFIT_PERCENT = 0.5; // Minimum 0.5% profit to consider

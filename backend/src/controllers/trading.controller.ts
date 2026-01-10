@@ -135,6 +135,69 @@ export async function getICTSignal(req: Request, res: Response) {
   }
 }
 
+/**
+ * GET /api/trading/ict/scan-all
+ * Scan all popular symbols for ICT signals and return latest
+ */
+export async function scanAllICT(_req: Request, res: Response) {
+  try {
+    const POPULAR_SYMBOLS = [
+      'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
+      'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
+      'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
+    ];
+
+    logger.info('Scanning all symbols for ICT signals');
+
+    const results = await Promise.allSettled(
+      POPULAR_SYMBOLS.map(async (symbol) => {
+        const [candles15m, candles1h, candles4h, candles1d] = await Promise.all([
+          fetchCandlesFromBingX(symbol, '15m', 200),
+          fetchCandlesFromBingX(symbol, '1h', 200),
+          fetchCandlesFromBingX(symbol, '4h', 200),
+          fetchCandlesFromBingX(symbol, '1d', 200),
+        ]);
+
+        const analysis = await ictBotService.analyzeMultiTimeframe(symbol, {
+          '15m': candles15m,
+          '1h': candles1h,
+          '4h': candles4h,
+          '1d': candles1d,
+        });
+
+        return {
+          symbol,
+          analysis,
+          timestamp: Date.now(),
+        };
+      })
+    );
+
+    // Filter successful results and get latest signal
+    const successfulResults = results
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+      .map(r => r.value)
+      .filter(r => r.analysis.bestSignal !== null)
+      .sort((a, b) => b.timestamp - a.timestamp);
+
+    res.json({
+      success: true,
+      data: {
+        latestSignal: successfulResults[0] || null,
+        totalScanned: POPULAR_SYMBOLS.length,
+        signalsFound: successfulResults.length,
+        allSignals: successfulResults.slice(0, 10), // Top 10
+      },
+    });
+  } catch (error) {
+    logger.error('ICT scan-all failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to scan all symbols for ICT',
+    });
+  }
+}
+
 // ============================================================================
 // SNIPER SCALP BOT ENDPOINTS
 // ============================================================================
@@ -166,6 +229,58 @@ export async function analyzeSniperScalp(req: Request, res: Response) {
     res.status(500).json({
       success: false,
       error: 'Failed to analyze sniper scalp opportunities',
+    });
+  }
+}
+
+/**
+ * GET /api/trading/sniper/scan-all
+ * Scan all popular symbols for sniper scalp signals and return latest
+ */
+export async function scanAllSniper(_req: Request, res: Response) {
+  try {
+    const POPULAR_SYMBOLS = [
+      'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
+      'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
+      'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
+    ];
+
+    logger.info('Scanning all symbols for Sniper signals');
+
+    const results = await Promise.allSettled(
+      POPULAR_SYMBOLS.map(async (symbol) => {
+        const candles = await fetchCandlesFromBingX(symbol, '1m', 100);
+        const signal = await sniperScalpService.analyze(symbol, candles, undefined);
+
+        return {
+          symbol,
+          signal,
+          timestamp: Date.now(),
+        };
+      })
+    );
+
+    // Filter successful results and get latest signal (non-NONE signals)
+    const successfulResults = results
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+      .map(r => r.value)
+      .filter(r => r.signal.type !== 'NONE')
+      .sort((a, b) => b.timestamp - a.timestamp);
+
+    res.json({
+      success: true,
+      data: {
+        latestSignal: successfulResults[0] || null,
+        totalScanned: POPULAR_SYMBOLS.length,
+        signalsFound: successfulResults.length,
+        allSignals: successfulResults.slice(0, 10), // Top 10
+      },
+    });
+  } catch (error) {
+    logger.error('Sniper scan-all failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to scan all symbols for Sniper',
     });
   }
 }

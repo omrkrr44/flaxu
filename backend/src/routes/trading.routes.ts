@@ -14,12 +14,14 @@ router.use(requireAccessLevel('FULL'));
 
 router.get('/ict/analyze/:symbol', tradingController.analyzeICT);
 router.get('/ict/signal/:symbol/:timeframe', tradingController.getICTSignal);
+router.get('/ict/scan-all', tradingController.scanAllICT);
 
 // ============================================================================
 // SNIPER SCALP BOT ROUTES
 // ============================================================================
 
 router.get('/sniper/analyze/:symbol', tradingController.analyzeSniperScalp);
+router.get('/sniper/scan-all', tradingController.scanAllSniper);
 
 // ============================================================================
 // ARBITRAGE SCANNER ROUTES
