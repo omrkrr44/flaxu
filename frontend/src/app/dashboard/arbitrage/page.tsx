@@ -31,7 +31,7 @@ interface ArbitrageScanResult {
 export default function ArbitragePage() {
   const [scanResult, setScanResult] = useState<ArbitrageScanResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true); // Auto-scan enabled by default
 
   const scanArbitrage = async () => {
     setLoading(true);

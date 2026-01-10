@@ -4,48 +4,45 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-  }
+    /* Dark Neon Theme - Always dark */
+    --background: 240 10% 5%;        /* Very dark blue-black #0a0a0f */
+    --foreground: 210 40% 98%;        /* Off-white text */
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 240 8% 8%;                /* Slightly lighter than background #121218 */
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+
+    --popover: 240 8% 8%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
+
+    --primary: 280 100% 70%;          /* Neon purple/magenta #c026d3 */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 195 100% 50%;        /* Neon cyan #00d4ff */
+    --secondary-foreground: 240 10% 5%;
+
+    --muted: 240 8% 15%;              /* Dark muted #1e1e28 */
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+
+    --accent: 280 100% 70%;           /* Neon purple */
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+
+    --destructive: 0 84.2% 60.2%;     /* Red */
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+
+    --border: 240 8% 20%;             /* Dark borders #2a2a38 */
+    --input: 240 8% 15%;
+    --ring: 280 100% 70%;             /* Neon purple ring */
+
+    --radius: 0.5rem;
+
+    /* Neon color palette */
+    --neon-cyan: 195 100% 50%;        /* #00d4ff */
+    --neon-magenta: 280 100% 70%;     /* #c026d3 */
+    --neon-purple: 270 100% 60%;      /* #9333ea */
+    --neon-pink: 330 100% 60%;        /* #ec4899 */
+    --neon-green: 120 100% 50%;       /* #00ff00 */
+    --neon-yellow: 60 100% 50%;       /* #ffff00 */
+    --neon-blue: 220 100% 60%;        /* #3b82f6 */
   }
 }
 
@@ -53,7 +50,102 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  /* Neon glow effects */
+  .neon-glow-cyan {
+    box-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.5),
+                0 0 20px hsl(var(--neon-cyan) / 0.3),
+                0 0 30px hsl(var(--neon-cyan) / 0.1);
+  }
+
+  .neon-glow-magenta {
+    box-shadow: 0 0 10px hsl(var(--neon-magenta) / 0.5),
+                0 0 20px hsl(var(--neon-magenta) / 0.3),
+                0 0 30px hsl(var(--neon-magenta) / 0.1);
+  }
+
+  .neon-glow-purple {
+    box-shadow: 0 0 10px hsl(var(--neon-purple) / 0.5),
+                0 0 20px hsl(var(--neon-purple) / 0.3),
+                0 0 30px hsl(var(--neon-purple) / 0.1);
+  }
+
+  .neon-text-cyan {
+    color: hsl(var(--neon-cyan));
+    text-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.8),
+                 0 0 20px hsl(var(--neon-cyan) / 0.5);
+  }
+
+  .neon-text-magenta {
+    color: hsl(var(--neon-magenta));
+    text-shadow: 0 0 10px hsl(var(--neon-magenta) / 0.8),
+                 0 0 20px hsl(var(--neon-magenta) / 0.5);
+  }
+
+  .neon-text-purple {
+    color: hsl(var(--neon-purple));
+    text-shadow: 0 0 10px hsl(var(--neon-purple) / 0.8),
+                 0 0 20px hsl(var(--neon-purple) / 0.5);
+  }
+
+  /* Neon border */
+  .neon-border-cyan {
+    border: 1px solid hsl(var(--neon-cyan));
+    box-shadow: inset 0 0 10px hsl(var(--neon-cyan) / 0.2),
+                0 0 10px hsl(var(--neon-cyan) / 0.4);
+  }
+
+  .neon-border-magenta {
+    border: 1px solid hsl(var(--neon-magenta));
+    box-shadow: inset 0 0 10px hsl(var(--neon-magenta) / 0.2),
+                0 0 10px hsl(var(--neon-magenta) / 0.4);
+  }
+
+  /* Animated neon pulse */
+  @keyframes neon-pulse {
+    0%, 100% {
+      opacity: 1;
+      text-shadow: 0 0 10px currentColor,
+                   0 0 20px currentColor,
+                   0 0 30px currentColor;
+    }
+    50% {
+      opacity: 0.8;
+      text-shadow: 0 0 5px currentColor,
+                   0 0 10px currentColor,
+                   0 0 15px currentColor;
+    }
+  }
+
+  .neon-pulse {
+    animation: neon-pulse 2s ease-in-out infinite;
+  }
+
+  /* Gradient backgrounds */
+  .neon-gradient-purple-cyan {
+    background: linear-gradient(135deg,
+      hsl(var(--neon-purple)) 0%,
+      hsl(var(--neon-cyan)) 100%);
+  }
+
+  .neon-gradient-magenta-purple {
+    background: linear-gradient(135deg,
+      hsl(var(--neon-magenta)) 0%,
+      hsl(var(--neon-purple)) 100%);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thumb-neon {
+    scrollbar-color: hsl(var(--neon-cyan)) hsl(var(--background));
   }
 }

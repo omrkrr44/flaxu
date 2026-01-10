@@ -43,6 +43,15 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        neon: {
+          cyan: 'hsl(var(--neon-cyan))',
+          magenta: 'hsl(var(--neon-magenta))',
+          purple: 'hsl(var(--neon-purple))',
+          pink: 'hsl(var(--neon-pink))',
+          green: 'hsl(var(--neon-green))',
+          yellow: 'hsl(var(--neon-yellow))',
+          blue: 'hsl(var(--neon-blue))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

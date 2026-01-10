@@ -35,7 +35,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'ICT Bot', href: '/dashboard/ict-bot', icon: '🎯' },
+    { name: 'Sniper Scalp', href: '/dashboard/sniper', icon: '⚡' },
     { name: 'Arbitrage', href: '/dashboard/arbitrage', icon: '💱' },
+    { name: 'Liquidity', href: '/dashboard/liquidity', icon: '💧' },
     { name: 'API Keys', href: '/dashboard/api-keys', icon: '🔑' },
   ];
 
@@ -52,12 +54,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
-      <nav className="border-b border-border bg-card">
+      <nav className="border-b border-border bg-card/50 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <Link href="/dashboard" className="flex items-center">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold neon-text-cyan tracking-wider">
                   FLAXU
                 </h1>
               </Link>
@@ -66,10 +68,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
+                    className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-all ${
                       pathname === item.href
-                        ? 'text-foreground border-b-2 border-primary'
-                        : 'text-muted-foreground hover:text-foreground'
+                        ? 'text-neon-cyan border-b-2 border-neon-cyan shadow-[0_2px_10px_rgba(0,212,255,0.5)]'
+                        : 'text-muted-foreground hover:text-neon-magenta hover:border-b-2 hover:border-neon-magenta/50'
                     }`}
                   >
                     <span className="mr-2">{item.icon}</span>
@@ -81,10 +83,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center space-x-4">
               <div className="flex flex-col items-end">
                 <span className="text-sm font-medium text-foreground">{user.email}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  user.accessLevel === 'FULL'
-                    ? 'bg-green-500/10 text-green-500'
-                    : 'bg-yellow-500/10 text-yellow-500'
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                  user.accessLevel === 'ADMIN'
+                    ? 'bg-neon-magenta/20 text-neon-magenta border border-neon-magenta/50'
+                    : user.accessLevel === 'FULL'
+                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/50'
+                    : 'bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/50'
                 }`}>
                   {user.accessLevel}
                 </span>
