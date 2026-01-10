@@ -424,6 +424,49 @@ export async function getLiquidityLevels(req: Request, res: Response) {
 // ============================================================================
 
 /**
+ * GET /api/trading/symbols
+ * Get all available trading symbols from BingX
+ */
+export async function getTradingSymbols(_req: Request, res: Response) {
+  try {
+    // BingX USDT perpetual pairs - most popular ones
+    const symbols = [
+      'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
+      'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
+      'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
+      'XLM-USDT', 'ALGO-USDT', 'FIL-USDT', 'APT-USDT', 'ARB-USDT',
+      'BCH-USDT', 'HYPE-USDT', 'ZEC-USDT', 'STG-USDT', 'STRK-USDT',
+      'OP-USDT', 'SUI-USDT', 'PEPE-USDT', 'SHIB-USDT', 'TRX-USDT',
+      'TON-USDT', 'NEAR-USDT', 'ICP-USDT', 'APE-USDT', 'LDO-USDT',
+      'AAVE-USDT', 'MKR-USDT', 'SNX-USDT', 'GRT-USDT', 'FTM-USDT',
+      'SAND-USDT', 'MANA-USDT', 'AXS-USDT', 'THETA-USDT', 'XTZ-USDT',
+      'EOS-USDT', 'ASTR-USDT', 'FLR-USDT', 'KAVA-USDT', 'RUNE-USDT',
+      'SUSHI-USDT', 'COMP-USDT', 'YFI-USDT', 'CRV-USDT', 'BAL-USDT',
+      '1INCH-USDT', 'ENJ-USDT', 'CHZ-USDT', 'ZIL-USDT', 'QTUM-USDT',
+      'VET-USDT', 'HOT-USDT', 'ZRX-USDT', 'BAT-USDT', 'IOTA-USDT',
+      'OMG-USDT', 'ANT-USDT', 'REP-USDT', 'KNC-USDT', 'LSK-USDT',
+      'WAVES-USDT', 'ICX-USDT', 'ONT-USDT', 'ZEN-USDT', 'DASH-USDT',
+      'NEO-USDT', 'GAS-USDT', 'IOST-USDT', 'SC-USDT', 'STORJ-USDT',
+      'STMX-USDT', 'BLZ-USDT', 'KLAY-USDT', 'CELO-USDT', 'AR-USDT',
+      'ROSE-USDT', 'SKL-USDT', 'GNO-USDT', 'OCEAN-USDT', 'NKN-USDT',
+      'OGN-USDT', 'LRC-USDT', 'RSR-USDT', 'RNDR-USDT', 'MASK-USDT',
+      'CTK-USDT', 'ALICE-USDT', 'FOR-USDT', 'DEGO-USDT', 'POLS-USDT',
+    ].sort();
+
+    res.json({
+      success: true,
+      data: symbols,
+    });
+  } catch (error) {
+    logger.error('Failed to get trading symbols:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get symbols',
+    });
+  }
+}
+
+/**
  * GET /api/trading/status
  * Get overall trading bot status
  */

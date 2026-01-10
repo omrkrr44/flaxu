@@ -117,13 +117,13 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Link href="/dashboard/market" className="block p-3 bg-muted rounded-lg hover:bg-muted/80 transition">
+                <Link href="/dashboard/arbitrage" className="block p-3 bg-muted rounded-lg hover:bg-muted/80 transition">
                   <p className="font-medium">Arbitrage Scanner</p>
                   <p className="text-xs text-muted-foreground">Cross-exchange opportunities</p>
                 </Link>
-                <Link href="/dashboard/market" className="block p-3 bg-muted rounded-lg hover:bg-muted/80 transition">
-                  <p className="font-medium">Liquidation Heatmap</p>
-                  <p className="text-xs text-muted-foreground">Real-time liquidations</p>
+                <Link href="/dashboard/liquidity" className="block p-3 bg-muted rounded-lg hover:bg-muted/80 transition">
+                  <p className="font-medium">Liquidity Heatmap</p>
+                  <p className="text-xs text-muted-foreground">Real-time order book analysis</p>
                 </Link>
               </div>
             </CardContent>

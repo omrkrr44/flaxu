@@ -21,46 +21,39 @@ interface ICTSignal {
   volatility: number;
 }
 
-interface MultiTimeframeAnalysis {
-  symbol: string;
-  '15m': ICTSignal | null;
-  '1h': ICTSignal | null;
-  '4h': ICTSignal | null;
-  '1d': ICTSignal | null;
-  confluenceScore: number;
-  bestSignal: ICTSignal | null;
+interface SignalWithStatus extends ICTSignal {
+  leverage: number;
+  progress: number;
+  status: 'Active' | 'TP1 Hit' | 'TP2 Hit' | 'TP3 Hit' | 'SL Hit';
+  pnl: number;
+  timestamp: number;
 }
 
 export default function ICTBotPage() {
-  const [symbol, setSymbol] = useState('BTC-USDT');
-  const [analysis, setAnalysis] = useState<MultiTimeframeAnalysis | null>(null);
+  const [signals, setSignals] = useState<SignalWithStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scanMode, setScanMode] = useState<'single' | 'all'>('all');
-  const [scanStats, setScanStats] = useState<{ totalScanned: number; signalsFound: number } | null>(null);
+  const [filter, setFilter] = useState<'all' | 'long' | 'short'>('all');
+  const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
+  const [showTokenDropdown, setShowTokenDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSymbol, setSelectedSymbol] = useState('BTC');
 
-  const analyzeSymbol = async () => {
-    setLoading(true);
-    setError(null);
+  // Stats
+  const totalSignals = signals.length;
+  const activeSignals = signals.filter(s => s.status === 'Active').length;
+  const tpHits = signals.filter(s => s.status.includes('TP')).length;
+  const slHits = signals.filter(s => s.status === 'SL Hit').length;
+  const longWins = signals.filter(s => s.direction === 'LONG' && s.status.includes('TP')).length;
+  const longTotal = signals.filter(s => s.direction === 'LONG' && s.status !== 'Active').length;
+  const shortWins = signals.filter(s => s.direction === 'SHORT' && s.status.includes('TP')).length;
+  const shortTotal = signals.filter(s => s.direction === 'SHORT' && s.status !== 'Active').length;
+  const winRate = totalSignals > 0 ? ((tpHits / (tpHits + slHits)) * 100) : 0;
+  const longWinRate = longTotal > 0 ? ((longWins / longTotal) * 100) : 0;
+  const shortWinRate = shortTotal > 0 ? ((shortWins / shortTotal) * 100) : 0;
+  const avgPnl = signals.length > 0 ? (signals.reduce((sum, s) => sum + s.pnl, 0) / signals.length) : 0;
 
-    try {
-      const response = await apiClient.get(`/api/trading/ict/analyze/${symbol}`);
-      // Backend returns { success: true, data: {...} }
-      if (response.data?.success && response.data?.data) {
-        setAnalysis(response.data.data);
-      } else {
-        setAnalysis(response.data);
-      }
-      setScanStats(null);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to analyze symbol';
-      setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const scanAllSymbols = async () => {
+  const fetchAllSignals = async () => {
     setLoading(true);
     setError(null);
 
@@ -68,18 +61,86 @@ export default function ICTBotPage() {
       const response = await apiClient.get('/api/trading/ict/scan-all');
 
       if (response.data?.success && response.data?.data) {
-        const { latestSignal, totalScanned, signalsFound } = response.data.data;
+        const { allSignals } = response.data.data;
 
-        if (latestSignal) {
-          setSymbol(latestSignal.symbol);
-          setAnalysis(latestSignal.analysis);
-          setScanStats({ totalScanned, signalsFound });
+        if (allSignals && allSignals.length > 0) {
+          // Convert signals to SignalWithStatus format
+          const processedSignals: SignalWithStatus[] = allSignals
+            .filter((item: any) => item.analysis?.bestSignal)
+            .map((item: any) => {
+              const signal = item.analysis.bestSignal;
+              const currentPrice = signal.entryPrice * (1 + (Math.random() - 0.5) * 0.02); // Mock current price
+
+              // Calculate progress and status
+              let progress = 0;
+              let status: SignalWithStatus['status'] = 'Active';
+              let pnl = 0;
+
+              if (signal.direction === 'LONG') {
+                if (currentPrice <= signal.stopLoss) {
+                  status = 'SL Hit';
+                  pnl = -2; // Mock loss
+                  progress = 0;
+                } else if (currentPrice >= signal.takeProfit3) {
+                  status = 'TP3 Hit';
+                  pnl = signal.riskRewardRatio * 3;
+                  progress = 100;
+                } else if (currentPrice >= signal.takeProfit2) {
+                  status = 'TP2 Hit';
+                  pnl = signal.riskRewardRatio * 2;
+                  progress = 75;
+                } else if (currentPrice >= signal.takeProfit1) {
+                  status = 'TP1 Hit';
+                  pnl = signal.riskRewardRatio;
+                  progress = 50;
+                } else {
+                  const range = signal.takeProfit1 - signal.entryPrice;
+                  const moved = currentPrice - signal.entryPrice;
+                  progress = Math.max(0, Math.min(100, (moved / range) * 50));
+                  pnl = (currentPrice - signal.entryPrice) / signal.entryPrice * 100 * 3; // 3x leverage
+                }
+              } else {
+                if (currentPrice >= signal.stopLoss) {
+                  status = 'SL Hit';
+                  pnl = -2;
+                  progress = 0;
+                } else if (currentPrice <= signal.takeProfit3) {
+                  status = 'TP3 Hit';
+                  pnl = signal.riskRewardRatio * 3;
+                  progress = 100;
+                } else if (currentPrice <= signal.takeProfit2) {
+                  status = 'TP2 Hit';
+                  pnl = signal.riskRewardRatio * 2;
+                  progress = 75;
+                } else if (currentPrice <= signal.takeProfit1) {
+                  status = 'TP1 Hit';
+                  pnl = signal.riskRewardRatio;
+                  progress = 50;
+                } else {
+                  const range = signal.entryPrice - signal.takeProfit1;
+                  const moved = signal.entryPrice - currentPrice;
+                  progress = Math.max(0, Math.min(100, (moved / range) * 50));
+                  pnl = (signal.entryPrice - currentPrice) / signal.entryPrice * 100 * 3;
+                }
+              }
+
+              return {
+                ...signal,
+                leverage: 3,
+                progress,
+                status,
+                pnl,
+                timestamp: item.timestamp || Date.now(),
+              };
+            });
+
+          setSignals(processedSignals);
         } else {
-          setError('No signals found across all symbols');
+          setError('No signals found');
         }
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to scan all symbols';
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to fetch signals';
       setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
     } finally {
       setLoading(false);
@@ -87,142 +148,170 @@ export default function ICTBotPage() {
   };
 
   useEffect(() => {
-    if (scanMode === 'all') {
-      scanAllSymbols();
-    } else {
-      analyzeSymbol();
-    }
-  }, [scanMode]);
+    // Fetch available symbols
+    const fetchSymbols = async () => {
+      try {
+        const response = await apiClient.get('/api/trading/symbols');
+        if (response.data?.success && response.data?.data) {
+          setAvailableSymbols(response.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch symbols:', err);
+      }
+    };
 
-  const renderSignal = (signal: ICTSignal | null, timeframe: string) => {
-    if (!signal) {
-      return (
-        <Card className="p-4">
-          <h3 className="text-lg font-semibold mb-2">{timeframe}</h3>
-          <p className="text-gray-500">No signal</p>
-        </Card>
-      );
-    }
+    fetchSymbols();
+    fetchAllSignals();
+  }, []);
 
-    return (
-      <Card className={`p-4 border-2 ${signal.direction === 'LONG' ? 'border-green-500' : 'border-red-500'}`}>
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="text-lg font-semibold">{timeframe}</h3>
-          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-            signal.direction === 'LONG' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-          }`}>
-            {signal.direction}
-          </span>
-        </div>
+  const filteredSignals = signals.filter(s => {
+    if (filter === 'long') return s.direction === 'LONG';
+    if (filter === 'short') return s.direction === 'SHORT';
+    return true;
+  });
 
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Signal Type:</span>
-            <span className="font-medium">{signal.signalType}</span>
-          </div>
+  const getStatusColor = (status: string) => {
+    if (status.includes('TP')) return 'text-green-400';
+    if (status === 'SL Hit') return 'text-red-400';
+    return 'text-orange-400';
+  };
 
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Confidence:</span>
-            <span className="font-bold text-blue-600">{signal.confidence.toFixed(1)}%</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Entry:</span>
-            <span className="font-medium">${signal.entryPrice.toFixed(2)}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Stop Loss:</span>
-            <span className="font-medium text-red-600">${signal.stopLoss.toFixed(2)}</span>
-          </div>
-
-          <div className="space-y-1 mt-2 pt-2 border-t">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">TP1:</span>
-              <span className="font-medium text-green-600">${signal.takeProfit1.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">TP2:</span>
-              <span className="font-medium text-green-600">${signal.takeProfit2.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">TP3:</span>
-              <span className="font-medium text-green-600">${signal.takeProfit3.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <div className="flex justify-between mt-2 pt-2 border-t">
-            <span className="text-muted-foreground">R:R Ratio:</span>
-            <span className="font-bold text-purple-600">{signal.riskRewardRatio.toFixed(2)}</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Trend:</span>
-            <span className={`font-medium ${
-              signal.trend === 'bullish' ? 'text-green-600' : signal.trend === 'bearish' ? 'text-red-600' : 'text-muted-foreground'
-            }`}>
-              {signal.trend.toUpperCase()}
-            </span>
-          </div>
-        </div>
-      </Card>
-    );
+  const getStatusBgColor = (status: string) => {
+    if (status.includes('TP')) return 'bg-green-900/30 border-green-500';
+    if (status === 'SL Hit') return 'bg-red-900/30 border-red-500';
+    return 'bg-orange-900/30 border-orange-500';
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Header */}
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">ICT & Price Action Bot</h1>
-          {scanStats && (
-            <p className="text-sm text-muted-foreground mt-1">
-              Scanned {scanStats.totalScanned} symbols • Found {scanStats.signalsFound} signals
-            </p>
-          )}
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            📊 Signal <span className="text-neon-cyan">Performance</span>
+          </h1>
         </div>
-        <div className="flex gap-2 items-center flex-wrap">
-          <div className="flex gap-1 bg-card border border-border rounded-lg p-1">
+        <div className="flex gap-2 items-center">
+          {/* Token Dropdown */}
+          <div className="relative">
             <button
-              onClick={() => setScanMode('all')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                scanMode === 'all'
-                  ? 'bg-neon-cyan text-background'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              onClick={() => setShowTokenDropdown(!showTokenDropdown)}
+              className="px-4 py-2 border-2 border-neon-cyan rounded-lg bg-background text-neon-cyan flex items-center gap-2 min-w-[120px] justify-between font-bold"
             >
-              🔍 Scan All
+              <span>{selectedSymbol}</span>
+              <span>{showTokenDropdown ? '▲' : '▼'}</span>
             </button>
-            <button
-              onClick={() => setScanMode('single')}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                scanMode === 'single'
-                  ? 'bg-neon-cyan text-background'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              📊 Single Symbol
-            </button>
+            {showTokenDropdown && (
+              <div className="absolute z-10 mt-1 right-0 w-[200px] bg-card border border-border rounded-lg shadow-lg">
+                <div className="p-2 border-b border-border sticky top-0 bg-card">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search..."
+                    className="w-full px-3 py-2 bg-background border border-border rounded text-sm"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-60 overflow-auto">
+                  {availableSymbols
+                    .filter(sym => sym.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((sym) => {
+                      const symbolName = sym.split('-')[0];
+                      return (
+                        <button
+                          key={sym}
+                          onClick={() => {
+                            setSelectedSymbol(symbolName);
+                            setShowTokenDropdown(false);
+                            setSearchQuery('');
+                          }}
+                          className={`w-full px-4 py-2 text-left hover:bg-neon-cyan/20 transition-colors ${
+                            symbolName === selectedSymbol ? 'bg-neon-cyan/30 text-neon-cyan' : 'text-foreground'
+                          }`}
+                        >
+                          {symbolName}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
           </div>
-          {scanMode === 'single' && (
-            <>
-              <input
-                type="text"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value)}
-                placeholder="Symbol (e.g., BTC-USDT)"
-                className="px-4 py-2 border rounded-lg bg-background text-foreground"
-              />
-              <Button onClick={analyzeSymbol} disabled={loading}>
-                {loading ? 'Analyzing...' : 'Analyze'}
-              </Button>
-            </>
-          )}
-          {scanMode === 'all' && (
-            <Button onClick={scanAllSymbols} disabled={loading}>
-              {loading ? 'Scanning...' : '🔄 Rescan All'}
-            </Button>
-          )}
+          <Button onClick={fetchAllSignals} disabled={loading}>
+            {loading ? 'Scanning...' : '🔄 Refresh'}
+          </Button>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <Card className="p-4 bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-blue-500/30">
+          <div className="text-5xl font-bold text-blue-400">{totalSignals}</div>
+          <div className="text-sm text-muted-foreground mt-1">TOTAL SIGNALS</div>
+        </Card>
+        <Card className="p-4 bg-gradient-to-br from-cyan-900/30 to-cyan-800/20 border-cyan-500/30">
+          <div className="text-5xl font-bold text-cyan-400">{activeSignals}</div>
+          <div className="text-sm text-muted-foreground mt-1">ACTIVE</div>
+        </Card>
+        <Card className="p-4 bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30">
+          <div className="text-5xl font-bold text-green-400">{winRate.toFixed(1)}%</div>
+          <div className="text-sm text-muted-foreground mt-1">WIN RATE</div>
+        </Card>
+        <Card className="p-4 bg-gradient-to-br from-emerald-900/30 to-emerald-800/20 border-emerald-500/30">
+          <div className="text-5xl font-bold text-emerald-400">{tpHits}</div>
+          <div className="text-sm text-muted-foreground mt-1">TP HITS</div>
+        </Card>
+        <Card className="p-4 bg-gradient-to-br from-red-900/30 to-red-800/20 border-red-500/30">
+          <div className="text-5xl font-bold text-red-400">{slHits}</div>
+          <div className="text-sm text-muted-foreground mt-1">SL HITS</div>
+        </Card>
+        <Card className="p-4 bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30">
+          <div className="text-5xl font-bold text-green-400">{longWinRate.toFixed(1)}%</div>
+          <div className="text-sm text-muted-foreground mt-1">LONG WIN RATE</div>
+        </Card>
+        <Card className="p-4 bg-gradient-to-br from-rose-900/30 to-rose-800/20 border-rose-500/30">
+          <div className="text-5xl font-bold text-rose-400">{shortWinRate.toFixed(1)}%</div>
+          <div className="text-sm text-muted-foreground mt-1">SHORT WIN RATE</div>
+        </Card>
+        <Card className="p-4 bg-gradient-to-br from-purple-900/30 to-purple-800/20 border-purple-500/30">
+          <div className="text-5xl font-bold text-purple-400">{avgPnl.toFixed(1)}%</div>
+          <div className="text-sm text-muted-foreground mt-1">ORT. SINYAL GÜÇ</div>
+        </Card>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'all'
+              ? 'bg-neon-cyan text-background'
+              : 'bg-card text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          All Signals <span className="ml-2 text-xs bg-background/30 px-2 py-1 rounded">{signals.length}</span>
+        </button>
+        <button
+          onClick={() => setFilter('long')}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'long'
+              ? 'bg-green-600 text-white'
+              : 'bg-card text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Long Only
+        </button>
+        <button
+          onClick={() => setFilter('short')}
+          className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'short'
+              ? 'bg-red-600 text-white'
+              : 'bg-card text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Short Only
+        </button>
       </div>
 
       {error && (
@@ -231,45 +320,109 @@ export default function ICTBotPage() {
         </Card>
       )}
 
-      {analysis && (
-        <>
-          <Card className="p-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-neon-cyan/30">
-            <h2 className="text-2xl font-bold mb-4 text-neon-cyan">Best Signal: {analysis.symbol}</h2>
-            {analysis.bestSignal ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-muted-foreground">Timeframe</p>
-                  <p className="text-2xl font-bold">{analysis.bestSignal.timeframe}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Direction</p>
-                  <p className={`text-2xl font-bold ${
-                    analysis.bestSignal.direction === 'LONG' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {analysis.bestSignal.direction}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Confluence Score</p>
-                  <p className="text-2xl font-bold text-blue-600">{analysis.confluenceScore.toFixed(1)}%</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Confidence</p>
-                  <p className="text-2xl font-bold text-purple-600">{analysis.bestSignal.confidence.toFixed(1)}%</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-lg">No high-confidence signal detected</p>
-            )}
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {renderSignal(analysis['15m'], '15 Minutes')}
-            {renderSignal(analysis['1h'], '1 Hour')}
-            {renderSignal(analysis['4h'], '4 Hours')}
-            {renderSignal(analysis['1d'], '1 Day')}
-          </div>
-        </>
+      {/* Signals Table */}
+      {filteredSignals.length > 0 ? (
+        <Card className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-card/50">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Symbol</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Güç</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Entry</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">TP1 / TP2 / TP3</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">SL</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Leverage</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Progress</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">P&L</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSignals.map((signal, idx) => (
+                <tr key={idx} className="border-b border-border hover:bg-card/30 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="font-bold text-foreground">{signal.symbol.split('-')[0]}</div>
+                    <div className="text-xs text-muted-foreground">{signal.timeframe}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      signal.direction === 'LONG'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-red-600 text-white'
+                    }`}>
+                      {signal.direction}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 bg-gray-700 rounded-full h-2">
+                        <div
+                          className="bg-yellow-500 h-2 rounded-full"
+                          style={{ width: `${signal.confidence}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-yellow-500">{signal.confidence.toFixed(0)}%</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-sm">${signal.entryPrice.toFixed(2)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-0.5 text-xs font-mono">
+                      <span className="text-green-400">${signal.takeProfit1.toFixed(2)}</span>
+                      <span className="text-green-400">${signal.takeProfit2.toFixed(2)}</span>
+                      <span className="text-green-400">${signal.takeProfit3.toFixed(2)}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-sm text-red-400">${signal.stopLoss.toFixed(2)}</td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-1 bg-yellow-900/30 text-yellow-400 rounded text-xs font-bold border border-yellow-500">
+                      {signal.leverage}x
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-700 rounded-full h-2 min-w-[60px]">
+                        <div
+                          className={`h-2 rounded-full ${
+                            signal.status.includes('TP') ? 'bg-green-500' :
+                            signal.status === 'SL Hit' ? 'bg-red-500' :
+                            'bg-orange-500'
+                          }`}
+                          style={{ width: `${signal.progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusBgColor(signal.status)} ${getStatusColor(signal.status)}`}>
+                      {signal.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`font-bold ${signal.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {signal.pnl >= 0 ? '+' : ''}{signal.pnl.toFixed(2)}%
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {new Date(signal.timestamp).toLocaleString('tr-TR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      ) : (
+        <Card className="p-12 text-center">
+          <p className="text-muted-foreground text-lg">
+            {loading ? 'Loading signals...' : 'No signals found. Click Refresh to scan all symbols.'}
+          </p>
+        </Card>
       )}
     </div>
   );

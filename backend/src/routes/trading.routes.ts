@@ -42,6 +42,7 @@ router.get('/liquidity/levels/:symbol', tradingController.getLiquidityLevels);
 // GENERAL ROUTES
 // ============================================================================
 
+router.get('/symbols', tradingController.getTradingSymbols);
 router.get('/status', tradingController.getTradingStatus);
 
 export default router;

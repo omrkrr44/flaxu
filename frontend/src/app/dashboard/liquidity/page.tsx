@@ -29,14 +29,6 @@ interface LiquidityHeatmap {
   exchanges: string[];
 }
 
-// Popular trading pairs
-const POPULAR_SYMBOLS = [
-  'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
-  'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
-  'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
-  'XLM-USDT', 'ALGO-USDT', 'FIL-USDT', 'APT-USDT', 'ARB-USDT'
-];
-
 export default function LiquidityHeatmapPage() {
   const [symbol, setSymbol] = useState('BTC-USDT');
   const [heatmap, setHeatmap] = useState<LiquidityHeatmap | null>(null);
@@ -44,6 +36,8 @@ export default function LiquidityHeatmapPage() {
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchHeatmap = async () => {
     setLoading(true);
@@ -69,6 +63,25 @@ export default function LiquidityHeatmapPage() {
   };
 
   useEffect(() => {
+    // Fetch available symbols from backend
+    const fetchSymbols = async () => {
+      try {
+        const response = await apiClient.get('/api/trading/symbols');
+        if (response.data?.success && response.data?.data) {
+          setAvailableSymbols(response.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch symbols:', err);
+        // Fallback to popular symbols
+        setAvailableSymbols([
+          'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
+          'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
+          'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
+        ]);
+      }
+    };
+
+    fetchSymbols();
     fetchHeatmap();
   }, []);
 
@@ -134,20 +147,42 @@ export default function LiquidityHeatmapPage() {
               <span>{showDropdown ? '▲' : '▼'}</span>
             </button>
             {showDropdown && (
-              <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-card border border-border rounded-lg shadow-lg">
-                {POPULAR_SYMBOLS.map((sym) => (
-                  <button
-                    key={sym}
-                    onClick={() => {
-                      setSymbol(sym);
-                      setShowDropdown(false);
-                      fetchHeatmap();
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-card/50 transition-colors"
-                  >
-                    {sym}
-                  </button>
-                ))}
+              <div className="absolute z-10 mt-1 w-full min-w-[200px] bg-card border border-border rounded-lg shadow-lg">
+                <div className="p-2 border-b border-border sticky top-0 bg-card">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search symbol..."
+                    className="w-full px-3 py-2 bg-background border border-border rounded text-sm"
+                    autoFocus
+                  />
+                </div>
+                <div className="max-h-60 overflow-auto">
+                  {availableSymbols
+                    .filter(sym => sym.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((sym) => (
+                      <button
+                        key={sym}
+                        onClick={() => {
+                          setSymbol(sym);
+                          setShowDropdown(false);
+                          setSearchQuery('');
+                          fetchHeatmap();
+                        }}
+                        className={`w-full px-4 py-2 text-left hover:bg-neon-cyan/20 transition-colors ${
+                          sym === symbol ? 'bg-neon-cyan/30 text-neon-cyan' : 'text-foreground'
+                        }`}
+                      >
+                        {sym}
+                      </button>
+                    ))}
+                  {availableSymbols.filter(sym => sym.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                    <div className="px-4 py-3 text-center text-muted-foreground text-sm">
+                      No symbols found
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -185,7 +220,7 @@ export default function LiquidityHeatmapPage() {
               </div>
               <div>
                 <div className="text-sm text-white/80">Exchanges</div>
-                <div className="text-2xl font-bold">{heatmap.exchanges.length}</div>
+                <div className="text-2xl font-bold">{heatmap.exchanges?.length || 0}</div>
               </div>
               <div>
                 <div className="text-sm text-white/80">Last Update</div>
