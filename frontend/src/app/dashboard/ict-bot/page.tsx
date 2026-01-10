@@ -42,7 +42,7 @@ export default function ICTBotPage() {
     setError(null);
 
     try {
-      const response = await apiClient.get(`/trading/ict/analyze/${symbol}`);
+      const response = await apiClient.get(`/api/trading/ict/analyze/${symbol}`);
       // Backend returns { success: true, data: {...} }
       if (response.data?.success && response.data?.data) {
         setAnalysis(response.data.data);

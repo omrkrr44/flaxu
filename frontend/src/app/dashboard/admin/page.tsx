@@ -51,8 +51,8 @@ export default function AdminPage() {
 
     try {
       const [analyticsRes, usersRes] = await Promise.all([
-        apiClient.get('/admin/analytics/overview'),
-        apiClient.get('/admin/users?limit=10'),
+        apiClient.get('/api/admin/analytics/overview'),
+        apiClient.get('/api/admin/users?limit=10'),
       ]);
 
       // Backend returns { success: true, data: {...} }
@@ -74,13 +74,13 @@ export default function AdminPage() {
 
   const updateAccessLevel = async (userId: string, newLevel: string) => {
     try {
-      await apiClient.put(`/admin/users/${userId}/access-level`, {
+      await apiClient.put(`/api/admin/users/${userId}/access-level`, {
         accessLevel: newLevel,
         reason: `Updated by admin via dashboard`,
       });
 
       // Reload users
-      const usersRes = await apiClient.get('/admin/users?limit=10');
+      const usersRes = await apiClient.get('/api/admin/users?limit=10');
       const usersData = usersRes.data?.success ? usersRes.data.data : usersRes.data;
       setUsers(usersData.users || usersData);
     } catch (err) {

@@ -37,7 +37,7 @@ export default function ArbitragePage() {
     setLoading(true);
 
     try {
-      const response = await apiClient.get('/trading/arbitrage/scan');
+      const response = await apiClient.get('/api/trading/arbitrage/scan');
       // Backend returns { success: true, data: {...} }
       if (response.data?.success && response.data?.data) {
         setScanResult(response.data.data);

@@ -43,7 +43,7 @@ export default function LiquidityHeatmapPage() {
     try {
       // Encode symbol to handle slashes in URLs
       const encodedSymbol = encodeURIComponent(symbol);
-      const response = await apiClient.get(`/trading/liquidity/heatmap/${encodedSymbol}`);
+      const response = await apiClient.get(`/api/trading/liquidity/heatmap/${encodedSymbol}`);
       // Backend returns { success: true, data: {...} }
       if (response.data?.success && response.data?.data) {
         setHeatmap(response.data.data);

@@ -37,7 +37,7 @@ export default function SniperScalpPage() {
     setError(null);
 
     try {
-      const response = await apiClient.get(`/trading/sniper/analyze/${symbol}`);
+      const response = await apiClient.get(`/api/trading/sniper/analyze/${symbol}`);
       // Backend returns { success: true, data: {...} }
       if (response.data?.success && response.data?.data) {
         setSignal(response.data.data);
