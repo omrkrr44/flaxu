@@ -38,9 +38,15 @@ export default function SniperScalpPage() {
 
     try {
       const response = await apiClient.get(`/trading/sniper/analyze/${symbol}`);
-      setSignal(response.data);
+      // Backend returns { success: true, data: {...} }
+      if (response.data?.success && response.data?.data) {
+        setSignal(response.data.data);
+      } else {
+        setSignal(response.data);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to analyze symbol');
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to analyze symbol';
+      setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
       console.error('Sniper analysis error:', err);
     } finally {
       setLoading(false);

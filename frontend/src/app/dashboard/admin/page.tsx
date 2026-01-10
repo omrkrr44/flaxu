@@ -55,8 +55,12 @@ export default function AdminPage() {
         apiClient.get('/admin/users?limit=10'),
       ]);
 
-      setAnalytics(analyticsRes.data);
-      setUsers(usersRes.data.users);
+      // Backend returns { success: true, data: {...} }
+      const analyticsData = analyticsRes.data?.success ? analyticsRes.data.data : analyticsRes.data;
+      const usersData = usersRes.data?.success ? usersRes.data.data : usersRes.data;
+
+      setAnalytics(analyticsData);
+      setUsers(usersData.users || usersData);
     } catch (err: any) {
       if (err.response?.status === 403) {
         setError('Access denied. Admin privileges required.');
@@ -77,7 +81,8 @@ export default function AdminPage() {
 
       // Reload users
       const usersRes = await apiClient.get('/admin/users?limit=10');
-      setUsers(usersRes.data.users);
+      const usersData = usersRes.data?.success ? usersRes.data.data : usersRes.data;
+      setUsers(usersData.users || usersData);
     } catch (err) {
       alert('Failed to update access level');
     }

@@ -42,9 +42,15 @@ export default function LiquidityHeatmapPage() {
 
     try {
       const response = await apiClient.get(`/trading/liquidity/heatmap/${symbol}`);
-      setHeatmap(response.data);
+      // Backend returns { success: true, data: {...} }
+      if (response.data?.success && response.data?.data) {
+        setHeatmap(response.data.data);
+      } else {
+        setHeatmap(response.data);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to fetch liquidity heatmap');
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to fetch liquidity heatmap';
+      setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
       console.error('Liquidity heatmap error:', err);
     } finally {
       setLoading(false);

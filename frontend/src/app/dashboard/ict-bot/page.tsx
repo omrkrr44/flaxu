@@ -43,9 +43,15 @@ export default function ICTBotPage() {
 
     try {
       const response = await apiClient.get(`/trading/ict/analyze/${symbol}`);
-      setAnalysis(response.data);
+      // Backend returns { success: true, data: {...} }
+      if (response.data?.success && response.data?.data) {
+        setAnalysis(response.data.data);
+      } else {
+        setAnalysis(response.data);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to analyze symbol');
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to analyze symbol';
+      setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
     } finally {
       setLoading(false);
     }
