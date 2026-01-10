@@ -30,6 +30,8 @@ export default function SniperScalpPage() {
   const [signal, setSignal] = useState<SniperSignal | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanMode, setScanMode] = useState<'single' | 'all'>('all');
+  const [scanStats, setScanStats] = useState<{ totalScanned: number; signalsFound: number } | null>(null);
   const [autoScan, setAutoScan] = useState(false);
 
   const analyzeSymbol = async () => {
@@ -44,6 +46,7 @@ export default function SniperScalpPage() {
       } else {
         setSignal(response.data);
       }
+      setScanStats(null);
     } catch (err: any) {
       const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to analyze symbol';
       setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
@@ -53,19 +56,53 @@ export default function SniperScalpPage() {
     }
   };
 
+  const scanAllSymbols = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.get('/api/trading/sniper/scan-all');
+
+      if (response.data?.success && response.data?.data) {
+        const { latestSignal, totalScanned, signalsFound } = response.data.data;
+
+        if (latestSignal) {
+          setSymbol(latestSignal.symbol);
+          setSignal(latestSignal.signal);
+          setScanStats({ totalScanned, signalsFound });
+        } else {
+          setError('No signals found across all symbols');
+        }
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to scan all symbols';
+      setError(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    analyzeSymbol();
-  }, []);
+    if (scanMode === 'all') {
+      scanAllSymbols();
+    } else {
+      analyzeSymbol();
+    }
+  }, [scanMode]);
 
   useEffect(() => {
     if (!autoScan) return;
 
     const interval = setInterval(() => {
-      analyzeSymbol();
+      if (scanMode === 'all') {
+        scanAllSymbols();
+      } else {
+        analyzeSymbol();
+      }
     }, 30000); // Scan every 30 seconds
 
     return () => clearInterval(interval);
-  }, [autoScan, symbol]);
+  }, [autoScan, symbol, scanMode]);
 
   const getSignalColor = (type: string) => {
     switch (type) {
@@ -82,9 +119,38 @@ export default function SniperScalpPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Sniper Scalp Bot</h1>
-        <div className="flex gap-2 items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Sniper Scalp Bot</h1>
+          {scanStats && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Scanned {scanStats.totalScanned} symbols • Found {scanStats.signalsFound} signals
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <div className="flex gap-1 bg-card border border-border rounded-lg p-1">
+            <button
+              onClick={() => setScanMode('all')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                scanMode === 'all'
+                  ? 'bg-neon-purple text-background'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              🔍 Scan All
+            </button>
+            <button
+              onClick={() => setScanMode('single')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                scanMode === 'single'
+                  ? 'bg-neon-purple text-background'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              📊 Single Symbol
+            </button>
+          </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -94,16 +160,25 @@ export default function SniperScalpPage() {
             />
             <span className="text-sm font-medium">Auto-scan (30s)</span>
           </label>
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="Symbol (e.g., BTC-USDT)"
-            className="px-4 py-2 border rounded-lg bg-background text-foreground"
-          />
-          <Button onClick={analyzeSymbol} disabled={loading}>
-            {loading ? 'Scanning...' : 'Scan Now'}
-          </Button>
+          {scanMode === 'single' && (
+            <>
+              <input
+                type="text"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                placeholder="Symbol (e.g., BTC-USDT)"
+                className="px-4 py-2 border rounded-lg bg-background text-foreground"
+              />
+              <Button onClick={analyzeSymbol} disabled={loading}>
+                {loading ? 'Scanning...' : 'Scan Now'}
+              </Button>
+            </>
+          )}
+          {scanMode === 'all' && (
+            <Button onClick={scanAllSymbols} disabled={loading}>
+              {loading ? 'Scanning...' : '🔄 Rescan All'}
+            </Button>
+          )}
         </div>
       </div>
 
