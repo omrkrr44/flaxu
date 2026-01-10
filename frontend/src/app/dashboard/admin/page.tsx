@@ -212,14 +212,14 @@ export default function AdminPage() {
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-b hover:bg-gray-50">
+                <tr key={user.id} className="border-b hover:bg-card/50">
                   <td className="py-3">{user.email}</td>
                   <td className="py-3">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      user.accessLevel === 'FULL' ? 'bg-green-100 text-green-800' :
-                      user.accessLevel === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
-                      user.accessLevel === 'SUSPENDED' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
+                      user.accessLevel === 'FULL' ? 'bg-green-900/30 text-green-400 border border-green-500' :
+                      user.accessLevel === 'ADMIN' ? 'bg-purple-900/30 text-purple-400 border border-purple-500' :
+                      user.accessLevel === 'SUSPENDED' ? 'bg-red-900/30 text-red-400 border border-red-500' :
+                      'bg-card text-muted-foreground border border-border'
                     }`}>
                       {user.accessLevel}
                     </span>
@@ -237,7 +237,7 @@ export default function AdminPage() {
                     <select
                       value={user.accessLevel}
                       onChange={(e) => updateAccessLevel(user.id, e.target.value)}
-                      className="px-2 py-1 border rounded text-sm"
+                      className="px-2 py-1 border rounded text-sm bg-background text-foreground"
                     >
                       <option value="LIMITED">LIMITED</option>
                       <option value="FULL">FULL</option>

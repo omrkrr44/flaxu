@@ -29,12 +29,21 @@ interface LiquidityHeatmap {
   exchanges: string[];
 }
 
+// Popular trading pairs
+const POPULAR_SYMBOLS = [
+  'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
+  'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
+  'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
+  'XLM-USDT', 'ALGO-USDT', 'FIL-USDT', 'APT-USDT', 'ARB-USDT'
+];
+
 export default function LiquidityHeatmapPage() {
   const [symbol, setSymbol] = useState('BTC-USDT');
   const [heatmap, setHeatmap] = useState<LiquidityHeatmap | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const fetchHeatmap = async () => {
     setLoading(true);
@@ -73,6 +82,19 @@ export default function LiquidityHeatmapPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, symbol]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showDropdown && !target.closest('.relative')) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown]);
+
   const getStrengthColor = (strength: number) => {
     if (strength >= 80) return 'bg-red-600';
     if (strength >= 60) return 'bg-orange-500';
@@ -103,13 +125,32 @@ export default function LiquidityHeatmapPage() {
             />
             <span className="text-sm font-medium">Auto-refresh (15s)</span>
           </label>
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="Symbol (e.g., BTC-USDT)"
-            className="px-4 py-2 border rounded-lg bg-background text-foreground"
-          />
+          <div className="relative">
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="px-4 py-2 border rounded-lg bg-background text-foreground flex items-center gap-2 min-w-[180px] justify-between"
+            >
+              <span>{symbol}</span>
+              <span>{showDropdown ? '▲' : '▼'}</span>
+            </button>
+            {showDropdown && (
+              <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-card border border-border rounded-lg shadow-lg">
+                {POPULAR_SYMBOLS.map((sym) => (
+                  <button
+                    key={sym}
+                    onClick={() => {
+                      setSymbol(sym);
+                      setShowDropdown(false);
+                      fetchHeatmap();
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-card/50 transition-colors"
+                  >
+                    {sym}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <Button onClick={fetchHeatmap} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
@@ -119,7 +160,7 @@ export default function LiquidityHeatmapPage() {
       <Card className="p-6 bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-neon-cyan/30">
         <h2 className="text-xl font-bold mb-2 text-neon-cyan">Order Book Aggregation</h2>
         <p className="text-muted-foreground">
-          Real-time liquidity analysis across 5 major exchanges: Binance, Bybit, OKX, Gate.io, KuCoin
+          Real-time liquidity analysis aggregated from multiple major cryptocurrency exchanges
         </p>
       </Card>
 

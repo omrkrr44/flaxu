@@ -170,44 +170,44 @@ export default function SniperScalpPage() {
           <Card className="p-6">
             <h3 className="text-xl font-bold mb-4">Market Indicators</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className={`p-4 rounded-lg ${signal.indicators.pumpDetected ? 'bg-red-100 border-2 border-red-500' : 'bg-gray-50'}`}>
+              <div className={`p-4 rounded-lg ${signal.indicators.pumpDetected ? 'bg-red-900/20 border-2 border-red-500' : 'bg-card border border-border'}`}>
                 <div className="text-sm text-muted-foreground mb-1">Pump Detected</div>
-                <div className={`text-2xl font-bold ${signal.indicators.pumpDetected ? 'text-red-600' : 'text-gray-400'}`}>
+                <div className={`text-2xl font-bold ${signal.indicators.pumpDetected ? 'text-red-400' : 'text-muted-foreground'}`}>
                   {signal.indicators.pumpDetected ? 'YES' : 'NO'}
                 </div>
               </div>
 
-              <div className={`p-4 rounded-lg ${signal.indicators.dumpDetected ? 'bg-green-100 border-2 border-green-500' : 'bg-gray-50'}`}>
+              <div className={`p-4 rounded-lg ${signal.indicators.dumpDetected ? 'bg-green-900/20 border-2 border-green-500' : 'bg-card border border-border'}`}>
                 <div className="text-sm text-muted-foreground mb-1">Dump Detected</div>
-                <div className={`text-2xl font-bold ${signal.indicators.dumpDetected ? 'text-green-600' : 'text-gray-400'}`}>
+                <div className={`text-2xl font-bold ${signal.indicators.dumpDetected ? 'text-green-400' : 'text-muted-foreground'}`}>
                   {signal.indicators.dumpDetected ? 'YES' : 'NO'}
                 </div>
               </div>
 
-              <div className={`p-4 rounded-lg ${signal.indicators.liquidationCascade ? 'bg-purple-100 border-2 border-purple-500' : 'bg-gray-50'}`}>
+              <div className={`p-4 rounded-lg ${signal.indicators.liquidationCascade ? 'bg-purple-900/20 border-2 border-purple-500' : 'bg-card border border-border'}`}>
                 <div className="text-sm text-muted-foreground mb-1">Liquidation Cascade</div>
-                <div className={`text-2xl font-bold ${signal.indicators.liquidationCascade ? 'text-purple-600' : 'text-gray-400'}`}>
+                <div className={`text-2xl font-bold ${signal.indicators.liquidationCascade ? 'text-purple-400' : 'text-muted-foreground'}`}>
                   {signal.indicators.liquidationCascade ? 'YES' : 'NO'}
                 </div>
               </div>
 
-              <div className="p-4 rounded-lg bg-blue-50">
+              <div className="p-4 rounded-lg bg-blue-900/20 border border-neon-blue/30">
                 <div className="text-sm text-muted-foreground mb-1">Volume Spike</div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-neon-blue">
                   {signal.indicators.volumeSpike.toFixed(1)}x
                 </div>
               </div>
 
-              <div className="p-4 rounded-lg bg-indigo-50">
+              <div className="p-4 rounded-lg bg-indigo-900/20 border border-border">
                 <div className="text-sm text-muted-foreground mb-1">5m Price Change</div>
-                <div className={`text-2xl font-bold ${signal.indicators.priceChange5m > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`text-2xl font-bold ${signal.indicators.priceChange5m > 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {signal.indicators.priceChange5m > 0 ? '+' : ''}{signal.indicators.priceChange5m.toFixed(2)}%
                 </div>
               </div>
 
-              <div className="p-4 rounded-lg bg-violet-50">
+              <div className="p-4 rounded-lg bg-violet-900/20 border border-border">
                 <div className="text-sm text-muted-foreground mb-1">15m Price Change</div>
-                <div className={`text-2xl font-bold ${signal.indicators.priceChange15m > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`text-2xl font-bold ${signal.indicators.priceChange15m > 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {signal.indicators.priceChange15m > 0 ? '+' : ''}{signal.indicators.priceChange15m.toFixed(2)}%
                 </div>
               </div>
