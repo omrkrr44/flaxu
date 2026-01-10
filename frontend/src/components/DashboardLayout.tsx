@@ -63,15 +63,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   FLAXU
                 </h1>
               </Link>
-              <div className="hidden md:ml-10 md:flex md:space-x-8">
+              <div className="hidden md:ml-10 md:flex md:space-x-6">
                 {[...navigation, ...adminNavigation].map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-all ${
+                    className={`inline-flex items-center px-1 pb-1 text-sm font-medium transition-colors border-b-2 ${
                       pathname === item.href
-                        ? 'text-neon-cyan border-b-2 border-neon-cyan shadow-[0_2px_10px_rgba(0,212,255,0.5)]'
-                        : 'text-muted-foreground hover:text-neon-magenta hover:border-b-2 hover:border-neon-magenta/50'
+                        ? 'text-neon-cyan border-neon-cyan'
+                        : 'text-gray-400 border-transparent hover:text-neon-cyan hover:border-neon-cyan/30'
                     }`}
                   >
                     <span className="mr-2">{item.icon}</span>

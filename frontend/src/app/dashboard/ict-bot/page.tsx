@@ -84,49 +84,49 @@ export default function ICTBotPage() {
 
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span className="text-gray-600">Signal Type:</span>
+            <span className="text-muted-foreground">Signal Type:</span>
             <span className="font-medium">{signal.signalType}</span>
           </div>
 
           <div className="flex justify-between">
-            <span className="text-gray-600">Confidence:</span>
+            <span className="text-muted-foreground">Confidence:</span>
             <span className="font-bold text-blue-600">{signal.confidence.toFixed(1)}%</span>
           </div>
 
           <div className="flex justify-between">
-            <span className="text-gray-600">Entry:</span>
+            <span className="text-muted-foreground">Entry:</span>
             <span className="font-medium">${signal.entryPrice.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between">
-            <span className="text-gray-600">Stop Loss:</span>
+            <span className="text-muted-foreground">Stop Loss:</span>
             <span className="font-medium text-red-600">${signal.stopLoss.toFixed(2)}</span>
           </div>
 
           <div className="space-y-1 mt-2 pt-2 border-t">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">TP1:</span>
+              <span className="text-muted-foreground">TP1:</span>
               <span className="font-medium text-green-600">${signal.takeProfit1.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">TP2:</span>
+              <span className="text-muted-foreground">TP2:</span>
               <span className="font-medium text-green-600">${signal.takeProfit2.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">TP3:</span>
+              <span className="text-muted-foreground">TP3:</span>
               <span className="font-medium text-green-600">${signal.takeProfit3.toFixed(2)}</span>
             </div>
           </div>
 
           <div className="flex justify-between mt-2 pt-2 border-t">
-            <span className="text-gray-600">R:R Ratio:</span>
+            <span className="text-muted-foreground">R:R Ratio:</span>
             <span className="font-bold text-purple-600">{signal.riskRewardRatio.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between">
-            <span className="text-gray-600">Trend:</span>
+            <span className="text-muted-foreground">Trend:</span>
             <span className={`font-medium ${
-              signal.trend === 'bullish' ? 'text-green-600' : signal.trend === 'bearish' ? 'text-red-600' : 'text-gray-600'
+              signal.trend === 'bullish' ? 'text-green-600' : signal.trend === 'bearish' ? 'text-red-600' : 'text-muted-foreground'
             }`}>
               {signal.trend.toUpperCase()}
             </span>
@@ -146,7 +146,7 @@ export default function ICTBotPage() {
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
             placeholder="Symbol (e.g., BTC-USDT)"
-            className="px-4 py-2 border rounded-lg"
+            className="px-4 py-2 border rounded-lg bg-background text-foreground"
           />
           <Button onClick={analyzeSymbol} disabled={loading}>
             {loading ? 'Analyzing...' : 'Analyze'}
@@ -155,23 +155,23 @@ export default function ICTBotPage() {
       </div>
 
       {error && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-red-600">{error}</p>
+        <Card className="p-4 bg-red-900/20 border-red-500">
+          <p className="text-red-400">{error}</p>
         </Card>
       )}
 
       {analysis && (
         <>
-          <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50">
-            <h2 className="text-2xl font-bold mb-4">Best Signal: {analysis.symbol}</h2>
+          <Card className="p-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border-neon-cyan/30">
+            <h2 className="text-2xl font-bold mb-4 text-neon-cyan">Best Signal: {analysis.symbol}</h2>
             {analysis.bestSignal ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600">Timeframe</p>
+                  <p className="text-muted-foreground">Timeframe</p>
                   <p className="text-2xl font-bold">{analysis.bestSignal.timeframe}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Direction</p>
+                  <p className="text-muted-foreground">Direction</p>
                   <p className={`text-2xl font-bold ${
                     analysis.bestSignal.direction === 'LONG' ? 'text-green-600' : 'text-red-600'
                   }`}>
@@ -179,16 +179,16 @@ export default function ICTBotPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Confluence Score</p>
+                  <p className="text-muted-foreground">Confluence Score</p>
                   <p className="text-2xl font-bold text-blue-600">{analysis.confluenceScore.toFixed(1)}%</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Confidence</p>
+                  <p className="text-muted-foreground">Confidence</p>
                   <p className="text-2xl font-bold text-purple-600">{analysis.bestSignal.confidence.toFixed(1)}%</p>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-600 text-lg">No high-confidence signal detected</p>
+              <p className="text-muted-foreground text-lg">No high-confidence signal detected</p>
             )}
           </Card>
 

@@ -99,7 +99,7 @@ export default function SniperScalpPage() {
             value={symbol}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
             placeholder="Symbol (e.g., BTC-USDT)"
-            className="px-4 py-2 border rounded-lg"
+            className="px-4 py-2 border rounded-lg bg-background text-foreground"
           />
           <Button onClick={analyzeSymbol} disabled={loading}>
             {loading ? 'Scanning...' : 'Scan Now'}
@@ -107,16 +107,16 @@ export default function SniperScalpPage() {
         </div>
       </div>
 
-      <Card className="p-6 bg-gradient-to-r from-indigo-50 to-purple-50">
-        <h2 className="text-xl font-bold mb-2">Fast Scalping Signals</h2>
-        <p className="text-gray-600">
+      <Card className="p-6 bg-gradient-to-r from-indigo-900/30 to-purple-900/30 border-neon-purple/30">
+        <h2 className="text-xl font-bold mb-2 text-neon-purple">Fast Scalping Signals</h2>
+        <p className="text-muted-foreground">
           Detects pump/dump reversals, liquidation cascades, and volume spikes for quick scalp opportunities.
         </p>
       </Card>
 
       {error && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-red-600">{error}</p>
+        <Card className="p-4 bg-red-900/20 border-red-500">
+          <p className="text-red-400">{error}</p>
         </Card>
       )}
 
@@ -171,42 +171,42 @@ export default function SniperScalpPage() {
             <h3 className="text-xl font-bold mb-4">Market Indicators</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className={`p-4 rounded-lg ${signal.indicators.pumpDetected ? 'bg-red-100 border-2 border-red-500' : 'bg-gray-50'}`}>
-                <div className="text-sm text-gray-600 mb-1">Pump Detected</div>
+                <div className="text-sm text-muted-foreground mb-1">Pump Detected</div>
                 <div className={`text-2xl font-bold ${signal.indicators.pumpDetected ? 'text-red-600' : 'text-gray-400'}`}>
                   {signal.indicators.pumpDetected ? 'YES' : 'NO'}
                 </div>
               </div>
 
               <div className={`p-4 rounded-lg ${signal.indicators.dumpDetected ? 'bg-green-100 border-2 border-green-500' : 'bg-gray-50'}`}>
-                <div className="text-sm text-gray-600 mb-1">Dump Detected</div>
+                <div className="text-sm text-muted-foreground mb-1">Dump Detected</div>
                 <div className={`text-2xl font-bold ${signal.indicators.dumpDetected ? 'text-green-600' : 'text-gray-400'}`}>
                   {signal.indicators.dumpDetected ? 'YES' : 'NO'}
                 </div>
               </div>
 
               <div className={`p-4 rounded-lg ${signal.indicators.liquidationCascade ? 'bg-purple-100 border-2 border-purple-500' : 'bg-gray-50'}`}>
-                <div className="text-sm text-gray-600 mb-1">Liquidation Cascade</div>
+                <div className="text-sm text-muted-foreground mb-1">Liquidation Cascade</div>
                 <div className={`text-2xl font-bold ${signal.indicators.liquidationCascade ? 'text-purple-600' : 'text-gray-400'}`}>
                   {signal.indicators.liquidationCascade ? 'YES' : 'NO'}
                 </div>
               </div>
 
               <div className="p-4 rounded-lg bg-blue-50">
-                <div className="text-sm text-gray-600 mb-1">Volume Spike</div>
+                <div className="text-sm text-muted-foreground mb-1">Volume Spike</div>
                 <div className="text-2xl font-bold text-blue-600">
                   {signal.indicators.volumeSpike.toFixed(1)}x
                 </div>
               </div>
 
               <div className="p-4 rounded-lg bg-indigo-50">
-                <div className="text-sm text-gray-600 mb-1">5m Price Change</div>
+                <div className="text-sm text-muted-foreground mb-1">5m Price Change</div>
                 <div className={`text-2xl font-bold ${signal.indicators.priceChange5m > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {signal.indicators.priceChange5m > 0 ? '+' : ''}{signal.indicators.priceChange5m.toFixed(2)}%
                 </div>
               </div>
 
               <div className="p-4 rounded-lg bg-violet-50">
-                <div className="text-sm text-gray-600 mb-1">15m Price Change</div>
+                <div className="text-sm text-muted-foreground mb-1">15m Price Change</div>
                 <div className={`text-2xl font-bold ${signal.indicators.priceChange15m > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {signal.indicators.priceChange15m > 0 ? '+' : ''}{signal.indicators.priceChange15m.toFixed(2)}%
                 </div>
@@ -214,9 +214,9 @@ export default function SniperScalpPage() {
             </div>
           </Card>
 
-          <Card className="p-6 bg-yellow-50 border-yellow-200">
-            <h3 className="text-lg font-bold text-yellow-800 mb-2">⚡ Fast Scalp Strategy</h3>
-            <ul className="space-y-2 text-sm text-yellow-900">
+          <Card className="p-6 bg-yellow-900/20 border-neon-yellow/30">
+            <h3 className="text-lg font-bold text-neon-yellow mb-2">⚡ Fast Scalp Strategy</h3>
+            <ul className="space-y-2 text-sm text-foreground">
               <li>• <strong>Entry:</strong> Enter at detected reversal or liquidation bounce</li>
               <li>• <strong>Quick Exit:</strong> Take profit at first resistance/support (0.5-1.5% target)</li>
               <li>• <strong>Tight Stop:</strong> Use tight stop-loss to minimize risk (0.3-0.5%)</li>

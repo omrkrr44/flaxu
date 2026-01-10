@@ -30,7 +30,7 @@ interface LiquidityHeatmap {
 }
 
 export default function LiquidityHeatmapPage() {
-  const [symbol, setSymbol] = useState('BTC/USDT');
+  const [symbol, setSymbol] = useState('BTC-USDT');
   const [heatmap, setHeatmap] = useState<LiquidityHeatmap | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,9 @@ export default function LiquidityHeatmapPage() {
     setError(null);
 
     try {
-      const response = await apiClient.get(`/trading/liquidity/heatmap/${symbol}`);
+      // Encode symbol to handle slashes in URLs
+      const encodedSymbol = encodeURIComponent(symbol);
+      const response = await apiClient.get(`/trading/liquidity/heatmap/${encodedSymbol}`);
       // Backend returns { success: true, data: {...} }
       if (response.data?.success && response.data?.data) {
         setHeatmap(response.data.data);
@@ -105,8 +107,8 @@ export default function LiquidityHeatmapPage() {
             type="text"
             value={symbol}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="Symbol (e.g., BTC/USDT)"
-            className="px-4 py-2 border rounded-lg"
+            placeholder="Symbol (e.g., BTC-USDT)"
+            className="px-4 py-2 border rounded-lg bg-background text-foreground"
           />
           <Button onClick={fetchHeatmap} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
@@ -114,16 +116,16 @@ export default function LiquidityHeatmapPage() {
         </div>
       </div>
 
-      <Card className="p-6 bg-gradient-to-r from-cyan-50 to-blue-50">
-        <h2 className="text-xl font-bold mb-2">Order Book Aggregation</h2>
-        <p className="text-gray-600">
+      <Card className="p-6 bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border-neon-cyan/30">
+        <h2 className="text-xl font-bold mb-2 text-neon-cyan">Order Book Aggregation</h2>
+        <p className="text-muted-foreground">
           Real-time liquidity analysis across 5 major exchanges: Binance, Bybit, OKX, Gate.io, KuCoin
         </p>
       </Card>
 
       {error && (
-        <Card className="p-4 bg-red-50 border-red-200">
-          <p className="text-red-600">{error}</p>
+        <Card className="p-4 bg-red-900/20 border-red-500">
+          <p className="text-red-400">{error}</p>
         </Card>
       )}
 
@@ -163,26 +165,26 @@ export default function LiquidityHeatmapPage() {
                     key={idx}
                     className={`p-4 rounded-lg border-2 ${
                       cluster.type === 'support'
-                        ? 'bg-green-50 border-green-500'
-                        : 'bg-red-50 border-red-500'
+                        ? 'bg-green-900/20 border-green-500'
+                        : 'bg-red-900/20 border-red-500'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-muted-foreground">
                           {cluster.type === 'support' ? '🟢 Support' : '🔴 Resistance'}
                         </div>
                         <div className="text-2xl font-bold">${cluster.price.toFixed(2)}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-gray-600">Strength</div>
+                        <div className="text-sm text-muted-foreground">Strength</div>
                         <div className={`text-xl font-bold ${cluster.type === 'support' ? 'text-green-600' : 'text-red-600'}`}>
                           {cluster.strength.toFixed(0)}%
                         </div>
                       </div>
                     </div>
                     <div className="mt-2 pt-2 border-t">
-                      <div className="text-sm text-gray-600">Total Volume</div>
+                      <div className="text-sm text-muted-foreground">Total Volume</div>
                       <div className="font-bold">{cluster.volume.toFixed(2)} BTC</div>
                     </div>
                     <div className="mt-2">
@@ -212,7 +214,7 @@ export default function LiquidityHeatmapPage() {
                   .map((level, idx) => (
                     <div
                       key={`ask-${idx}`}
-                      className="flex items-center gap-2 mb-1 p-2 rounded hover:bg-red-50"
+                      className="flex items-center gap-2 mb-1 p-2 rounded hover:bg-red-900/10"
                     >
                       <div className="w-20 text-right font-mono text-sm">
                         ${level.price.toFixed(2)}
@@ -227,7 +229,7 @@ export default function LiquidityHeatmapPage() {
                               {level.totalVolume.toFixed(2)} BTC
                             </div>
                           </div>
-                          <div className="text-xs text-gray-600 w-24">
+                          <div className="text-xs text-muted-foreground w-24">
                             {getStrengthText(level.strength)}
                           </div>
                         </div>
@@ -237,10 +239,10 @@ export default function LiquidityHeatmapPage() {
               </div>
 
               {/* Current Price Divider */}
-              <div className="py-3 my-3 border-y-2 border-purple-500 bg-purple-50">
+              <div className="py-3 my-3 border-y-2 border-neon-purple bg-purple-900/20">
                 <div className="text-center">
-                  <div className="text-sm text-gray-600">CURRENT PRICE</div>
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-sm text-muted-foreground">CURRENT PRICE</div>
+                  <div className="text-2xl font-bold text-neon-purple">
                     ${heatmap.currentPrice.toFixed(2)}
                   </div>
                 </div>
@@ -255,7 +257,7 @@ export default function LiquidityHeatmapPage() {
                   .map((level, idx) => (
                     <div
                       key={`bid-${idx}`}
-                      className="flex items-center gap-2 mb-1 p-2 rounded hover:bg-green-50"
+                      className="flex items-center gap-2 mb-1 p-2 rounded hover:bg-green-900/10"
                     >
                       <div className="w-20 text-right font-mono text-sm">
                         ${level.price.toFixed(2)}
@@ -270,7 +272,7 @@ export default function LiquidityHeatmapPage() {
                               {level.totalVolume.toFixed(2)} BTC
                             </div>
                           </div>
-                          <div className="text-xs text-gray-600 w-24">
+                          <div className="text-xs text-muted-foreground w-24">
                             {getStrengthText(level.strength)}
                           </div>
                         </div>
@@ -282,9 +284,9 @@ export default function LiquidityHeatmapPage() {
           </Card>
 
           {/* Exchange Breakdown */}
-          <Card className="p-6 bg-indigo-50">
-            <h3 className="text-lg font-bold text-indigo-800 mb-2">📊 How to Use Liquidity Data</h3>
-            <ul className="space-y-2 text-sm text-indigo-900">
+          <Card className="p-6 bg-indigo-900/20 border-neon-blue/30">
+            <h3 className="text-lg font-bold text-neon-blue mb-2">📊 How to Use Liquidity Data</h3>
+            <ul className="space-y-2 text-sm text-foreground">
               <li>• <strong>Strong Support:</strong> High bid volume indicates strong buying interest at that level</li>
               <li>• <strong>Strong Resistance:</strong> High ask volume shows significant selling pressure</li>
               <li>• <strong>Liquidity Clusters:</strong> Large accumulations of orders often act as price magnets</li>

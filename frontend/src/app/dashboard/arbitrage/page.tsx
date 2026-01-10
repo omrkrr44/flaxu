@@ -86,22 +86,22 @@ export default function ArbitragePage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="p-4">
-              <p className="text-gray-600 text-sm">Total Opportunities</p>
+              <p className="text-muted-foreground text-sm">Total Opportunities</p>
               <p className="text-3xl font-bold text-blue-600">{scanResult.totalOpportunities}</p>
             </Card>
 
             <Card className="p-4">
-              <p className="text-gray-600 text-sm">Symbols Scanned</p>
+              <p className="text-muted-foreground text-sm">Symbols Scanned</p>
               <p className="text-3xl font-bold text-purple-600">{scanResult.symbolsScanned}</p>
             </Card>
 
             <Card className="p-4">
-              <p className="text-gray-600 text-sm">Exchanges</p>
+              <p className="text-muted-foreground text-sm">Exchanges</p>
               <p className="text-3xl font-bold text-green-600">{scanResult.exchanges.length}</p>
             </Card>
 
             <Card className="p-4">
-              <p className="text-gray-600 text-sm">Best Profit</p>
+              <p className="text-muted-foreground text-sm">Best Profit</p>
               <p className="text-3xl font-bold text-orange-600">
                 {scanResult.opportunities.length > 0
                   ? `${scanResult.opportunities[0].netProfitPercent.toFixed(2)}%`
@@ -114,7 +114,7 @@ export default function ArbitragePage() {
             <h2 className="text-xl font-bold mb-4">Top Opportunities</h2>
 
             {scanResult.opportunities.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-muted-foreground text-center py-8">
                 No profitable arbitrage opportunities found at the moment.
               </p>
             ) : (
@@ -126,32 +126,32 @@ export default function ArbitragePage() {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                       <div>
-                        <p className="text-gray-600 text-sm">Symbol</p>
+                        <p className="text-muted-foreground text-sm">Symbol</p>
                         <p className="font-bold text-lg">{opp.symbol}</p>
                       </div>
 
                       <div>
-                        <p className="text-gray-600 text-sm">Buy @ {opp.buyExchange}</p>
+                        <p className="text-muted-foreground text-sm">Buy @ {opp.buyExchange}</p>
                         <p className="font-medium text-blue-600">${opp.buyPrice.toFixed(4)}</p>
                       </div>
 
                       <div>
-                        <p className="text-gray-600 text-sm">Sell @ {opp.sellExchange}</p>
+                        <p className="text-muted-foreground text-sm">Sell @ {opp.sellExchange}</p>
                         <p className="font-medium text-green-600">${opp.sellPrice.toFixed(4)}</p>
                       </div>
 
                       <div>
-                        <p className="text-gray-600 text-sm">Net Profit</p>
+                        <p className="text-muted-foreground text-sm">Net Profit</p>
                         <p className="font-bold text-green-600 text-lg">
                           {opp.netProfitPercent.toFixed(2)}%
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                           ${opp.profitUSD.toFixed(2)} on $1000
                         </p>
                       </div>
 
                       <div>
-                        <p className="text-gray-600 text-sm">Confidence</p>
+                        <p className="text-muted-foreground text-sm">Confidence</p>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 bg-gray-200 rounded-full h-2">
                             <div
@@ -161,7 +161,7 @@ export default function ArbitragePage() {
                           </div>
                           <span className="text-sm font-medium">{opp.confidence}%</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                           Fees: {opp.fees.totalFees.toFixed(2)}%
                         </p>
                       </div>
