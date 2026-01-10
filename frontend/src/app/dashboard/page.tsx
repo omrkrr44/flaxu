@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -10,8 +9,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Welcome back! 👋</h1>
           <p className="text-muted-foreground">
@@ -132,6 +130,5 @@ export default function DashboardPage() {
           </Card>
         </div>
       </div>
-    </DashboardLayout>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -87,8 +86,7 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl">
         <div>
           <h1 className="text-3xl font-bold">BingX API Keys</h1>
           <p className="text-muted-foreground">
@@ -234,7 +232,6 @@ export default function ApiKeysPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }
