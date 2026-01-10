@@ -164,6 +164,21 @@ export default function SniperScalpPage() {
                 <div className="text-white/90">{signal.reason}</div>
               </div>
             )}
+
+            {signal.type !== 'NONE' && (
+              <div className="mt-4 flex gap-3">
+                <Button
+                  className={`flex-1 text-lg font-bold py-3 ${
+                    signal.direction === 'LONG'
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                  onClick={() => alert(`Opening ${signal.direction} position for ${signal.symbol}\nEntry: $${signal.entryPrice}\nSL: $${signal.stopLoss}\nTP: $${signal.takeProfit}`)}
+                >
+                  🚀 Open {signal.direction} Position
+                </Button>
+              </div>
+            )}
           </Card>
 
           {/* Indicators Card */}
