@@ -114,22 +114,6 @@ export default function LiquidityHeatmapPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
 
-  const getStrengthColor = (strength: number) => {
-    if (strength >= 80) return 'bg-red-600';
-    if (strength >= 60) return 'bg-orange-500';
-    if (strength >= 40) return 'bg-yellow-500';
-    if (strength >= 20) return 'bg-green-500';
-    return 'bg-blue-500';
-  };
-
-  const getStrengthText = (strength: number) => {
-    if (strength >= 80) return 'Very Strong';
-    if (strength >= 60) return 'Strong';
-    if (strength >= 40) return 'Moderate';
-    if (strength >= 20) return 'Weak';
-    return 'Very Weak';
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -317,84 +301,37 @@ export default function LiquidityHeatmapPage() {
             </Card>
           )}
 
-          {/* Detailed Levels */}
-          <Card className="p-6">
-            <h3 className="text-xl font-bold mb-4">Liquidity Levels</h3>
-            <div className="space-y-2">
-              {/* Asks (Resistance) */}
-              <div>
-                <h4 className="text-sm font-bold text-red-600 mb-2">ASK SIDE (Resistance)</h4>
-                {heatmap.levels
-                  .filter((level) => level.type === 'ask')
-                  .slice(0, 10)
-                  .map((level, idx) => (
-                    <div
-                      key={`ask-${idx}`}
-                      className="flex items-center gap-2 mb-1 p-2 rounded hover:bg-red-900/10"
-                    >
-                      <div className="w-20 text-right font-mono text-sm">
-                        ${level.price.toFixed(2)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-6 overflow-hidden">
-                            <div
-                              className={`h-full ${getStrengthColor(level.strength)} flex items-center px-2 text-white text-xs font-bold`}
-                              style={{ width: `${level.strength}%` }}
-                            >
-                              {level.totalVolume.toFixed(2)} BTC
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground w-24">
-                            {getStrengthText(level.strength)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              {/* Current Price Divider */}
-              <div className="py-3 my-3 border-y-2 border-neon-purple bg-purple-900/20">
-                <div className="text-center">
-                  <div className="text-sm text-muted-foreground">CURRENT PRICE</div>
-                  <div className="text-2xl font-bold text-neon-purple">
-                    ${heatmap.currentPrice.toFixed(2)}
-                  </div>
+          {/* Market Sentiment */}
+          <Card className="p-6 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border-purple-500/30">
+            <h3 className="text-xl font-bold mb-4">Market Sentiment Analysis</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-card rounded-lg border border-border">
+                <div className="text-sm text-muted-foreground">Sentiment</div>
+                <div className={`text-2xl font-bold ${
+                  heatmap.marketSentiment === 'bullish' ? 'text-green-400' :
+                  heatmap.marketSentiment === 'bearish' ? 'text-red-400' :
+                  'text-yellow-400'
+                }`}>
+                  {heatmap.marketSentiment.toUpperCase()}
                 </div>
               </div>
-
-              {/* Bids (Support) */}
-              <div>
-                <h4 className="text-sm font-bold text-green-600 mb-2">BID SIDE (Support)</h4>
-                {heatmap.levels
-                  .filter((level) => level.type === 'bid')
-                  .slice(0, 10)
-                  .map((level, idx) => (
-                    <div
-                      key={`bid-${idx}`}
-                      className="flex items-center gap-2 mb-1 p-2 rounded hover:bg-green-900/10"
-                    >
-                      <div className="w-20 text-right font-mono text-sm">
-                        ${level.price.toFixed(2)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-6 overflow-hidden">
-                            <div
-                              className={`h-full ${getStrengthColor(level.strength)} flex items-center px-2 text-white text-xs font-bold`}
-                              style={{ width: `${level.strength}%` }}
-                            >
-                              {level.totalVolume.toFixed(2)} BTC
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground w-24">
-                            {getStrengthText(level.strength)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              <div className="p-4 bg-card rounded-lg border border-border">
+                <div className="text-sm text-muted-foreground">Liquidity Ratio</div>
+                <div className="text-2xl font-bold text-cyan-400">
+                  {heatmap.liquidityRatio.toFixed(2)}x
+                </div>
+              </div>
+              <div className="p-4 bg-card rounded-lg border border-border">
+                <div className="text-sm text-muted-foreground">Strongest Support</div>
+                <div className="text-2xl font-bold text-green-400">
+                  ${heatmap.strongestSupport.toFixed(2)}
+                </div>
+              </div>
+              <div className="p-4 bg-card rounded-lg border border-border">
+                <div className="text-sm text-muted-foreground">Strongest Resistance</div>
+                <div className="text-2xl font-bold text-red-400">
+                  ${heatmap.strongestResistance.toFixed(2)}
+                </div>
               </div>
             </div>
           </Card>
