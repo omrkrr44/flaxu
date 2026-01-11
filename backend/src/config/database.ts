@@ -6,13 +6,21 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-const prisma = global.prisma || new PrismaClient({
-  log: [
-    { level: 'query', emit: 'event' },
-    { level: 'error', emit: 'stdout' },
-    { level: 'warn', emit: 'stdout' },
-  ],
-});
+let prisma: PrismaClient | undefined;
+
+try {
+  prisma = global.prisma || new PrismaClient({
+    log: [
+      { level: 'query', emit: 'event' },
+      { level: 'error', emit: 'stdout' },
+      { level: 'warn', emit: 'stdout' },
+    ],
+  });
+} catch (error) {
+  logger.warn('⚠️  Prisma client not available. Database features will be disabled.');
+  logger.warn('   Run "prisma generate" to enable database features.');
+  prisma = undefined;
+}
 
 // Log slow queries in development
 if (process.env.NODE_ENV === 'development') {
@@ -32,12 +40,17 @@ if (process.env.NODE_ENV !== 'production') {
  * Connect to database
  */
 export async function connectDatabase(): Promise<void> {
+  if (!prisma) {
+    logger.warn('⚠️  Skipping database connection (Prisma not available)');
+    return;
+  }
+
   try {
     await prisma.$connect();
     logger.info('✅ Database connected successfully');
   } catch (error) {
     logger.error('❌ Database connection failed:', error);
-    process.exit(1);
+    logger.warn('⚠️  Continuing without database. Some features may be limited.');
   }
 }
 
@@ -45,6 +58,9 @@ export async function connectDatabase(): Promise<void> {
  * Disconnect from database
  */
 export async function disconnectDatabase(): Promise<void> {
+  if (!prisma) {
+    return;
+  }
   await prisma.$disconnect();
   logger.info('Database disconnected');
 }
@@ -53,6 +69,10 @@ export async function disconnectDatabase(): Promise<void> {
  * Health check
  */
 export async function checkDatabaseHealth(): Promise<boolean> {
+  if (!prisma) {
+    return false;
+  }
+
   try {
     await prisma.$queryRaw`SELECT 1`;
     return true;
