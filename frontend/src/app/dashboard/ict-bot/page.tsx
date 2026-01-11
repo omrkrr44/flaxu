@@ -34,10 +34,6 @@ export default function ICTBotPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'long' | 'short'>('all');
-  const [availableSymbols, setAvailableSymbols] = useState<string[]>([]);
-  const [showTokenDropdown, setShowTokenDropdown] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSymbol, setSelectedSymbol] = useState('BTC');
 
   // Stats
   const totalSignals = signals.length;
@@ -148,19 +144,6 @@ export default function ICTBotPage() {
   };
 
   useEffect(() => {
-    // Fetch available symbols
-    const fetchSymbols = async () => {
-      try {
-        const response = await apiClient.get('/api/trading/symbols');
-        if (response.data?.success && response.data?.data) {
-          setAvailableSymbols(response.data.data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch symbols:', err);
-      }
-    };
-
-    fetchSymbols();
     fetchAllSignals();
   }, []);
 
@@ -188,60 +171,15 @@ export default function ICTBotPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
-            📊 Signal <span className="text-neon-cyan">Performance</span>
+            📊 ICT Signal <span className="text-neon-cyan">Performance</span>
           </h1>
+          <p className="text-muted-foreground mt-2">
+            All tokens scanned - Latest signals from ALL BingX pairs
+          </p>
         </div>
-        <div className="flex gap-2 items-center">
-          {/* Token Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowTokenDropdown(!showTokenDropdown)}
-              className="px-4 py-2 border-2 border-neon-cyan rounded-lg bg-background text-neon-cyan flex items-center gap-2 min-w-[120px] justify-between font-bold"
-            >
-              <span>{selectedSymbol}</span>
-              <span>{showTokenDropdown ? '▲' : '▼'}</span>
-            </button>
-            {showTokenDropdown && (
-              <div className="absolute z-10 mt-1 right-0 w-[200px] bg-card border border-border rounded-lg shadow-lg">
-                <div className="p-2 border-b border-border sticky top-0 bg-card">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search..."
-                    className="w-full px-3 py-2 bg-background border border-border rounded text-sm"
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-60 overflow-auto">
-                  {availableSymbols
-                    .filter(sym => sym.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((sym) => {
-                      const symbolName = sym.split('-')[0];
-                      return (
-                        <button
-                          key={sym}
-                          onClick={() => {
-                            setSelectedSymbol(symbolName);
-                            setShowTokenDropdown(false);
-                            setSearchQuery('');
-                          }}
-                          className={`w-full px-4 py-2 text-left hover:bg-neon-cyan/20 transition-colors ${
-                            symbolName === selectedSymbol ? 'bg-neon-cyan/30 text-neon-cyan' : 'text-foreground'
-                          }`}
-                        >
-                          {symbolName}
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-          </div>
-          <Button onClick={fetchAllSignals} disabled={loading}>
-            {loading ? 'Scanning...' : '🔄 Refresh'}
-          </Button>
-        </div>
+        <Button onClick={fetchAllSignals} disabled={loading}>
+          {loading ? 'Scanning...' : '🔄 Scan All Tokens'}
+        </Button>
       </div>
 
       {/* Stats - Compact Horizontal */}
