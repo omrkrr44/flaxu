@@ -232,45 +232,80 @@ export async function analyzeSniperScalp(req: Request, res: Response) {
 
 /**
  * GET /api/trading/sniper/scan-all
- * Scan all popular symbols for sniper scalp signals and return latest
+ * Scan ALL BingX Futures symbols for 5-minute pump/dump (5%+ movement)
  */
 export async function scanAllSniper(_req: Request, res: Response) {
   try {
-    const POPULAR_SYMBOLS = [
+    // ALL BingX USDT perpetual pairs (100+)
+    const ALL_SYMBOLS = [
       'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
       'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
       'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
+      'XLM-USDT', 'ALGO-USDT', 'FIL-USDT', 'APT-USDT', 'ARB-USDT',
+      'BCH-USDT', 'HYPE-USDT', 'ZEC-USDT', 'STG-USDT', 'STRK-USDT',
+      'OP-USDT', 'SUI-USDT', 'PEPE-USDT', 'SHIB-USDT', 'TRX-USDT',
+      'TON-USDT', 'NEAR-USDT', 'ICP-USDT', 'APE-USDT', 'LDO-USDT',
+      'AAVE-USDT', 'MKR-USDT', 'SNX-USDT', 'GRT-USDT', 'FTM-USDT',
+      'SAND-USDT', 'MANA-USDT', 'AXS-USDT', 'THETA-USDT', 'XTZ-USDT',
+      'EOS-USDT', 'ASTR-USDT', 'FLR-USDT', 'KAVA-USDT', 'RUNE-USDT',
+      'SUSHI-USDT', 'COMP-USDT', 'YFI-USDT', 'CRV-USDT', 'BAL-USDT',
+      '1INCH-USDT', 'ENJ-USDT', 'CHZ-USDT', 'ZIL-USDT', 'QTUM-USDT',
+      'VET-USDT', 'HOT-USDT', 'ZRX-USDT', 'BAT-USDT', 'IOTA-USDT',
+      'OMG-USDT', 'ANT-USDT', 'REP-USDT', 'KNC-USDT', 'LSK-USDT',
+      'WAVES-USDT', 'ICX-USDT', 'ONT-USDT', 'ZEN-USDT', 'DASH-USDT',
+      'NEO-USDT', 'GAS-USDT', 'IOST-USDT', 'SC-USDT', 'STORJ-USDT',
+      'STMX-USDT', 'BLZ-USDT', 'KLAY-USDT', 'CELO-USDT', 'AR-USDT',
+      'ROSE-USDT', 'SKL-USDT', 'GNO-USDT', 'OCEAN-USDT', 'NKN-USDT',
+      'OGN-USDT', 'LRC-USDT', 'RSR-USDT', 'RNDR-USDT', 'MASK-USDT',
+      'CTK-USDT', 'ALICE-USDT', 'FOR-USDT', 'DEGO-USDT', 'POLS-USDT',
     ];
 
-    logger.info('Scanning all symbols for Sniper signals');
+    logger.info(`Scanning ${ALL_SYMBOLS.length} symbols for 5min pump/dump (5%+)`);
 
     const results = await Promise.allSettled(
-      POPULAR_SYMBOLS.map(async (symbol) => {
-        const candles = await fetchCandlesFromBingX(symbol, '1m', 100);
-        const signal = await sniperScalpService.analyze(symbol, candles, undefined);
+      ALL_SYMBOLS.map(async (symbol) => {
+        // Get last 6 x 1-minute candles (5 minutes of data)
+        const candles = await fetchCandlesFromBingX(symbol, '1m', 6);
+
+        if (candles.length < 2) return null;
+
+        // Calculate % change in last 5 minutes
+        const firstPrice = candles[0].open;
+        const lastPrice = candles[candles.length - 1].close;
+        const percentChange = ((lastPrice - firstPrice) / firstPrice) * 100;
+
+        // Only return if pump/dump >= 5%
+        if (Math.abs(percentChange) < 5) return null;
+
+        const isPump = percentChange > 0;
 
         return {
           symbol,
-          signal,
+          percentChange,
+          type: isPump ? 'PUMP' : 'DUMP',
+          direction: isPump ? 'SHORT' : 'LONG', // Reversal strategy
+          entryPrice: lastPrice,
+          firstPrice,
+          lastPrice,
           timestamp: Date.now(),
+          timeDetected: new Date().toISOString(),
         };
       })
     );
 
-    // Filter successful results and get latest signal (non-NONE signals)
-    const successfulResults = results
-      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+    // Filter and sort by absolute percent change (highest first)
+    const pumpDumps = results
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value !== null)
       .map(r => r.value)
-      .filter(r => r.signal.type !== 'NONE')
-      .sort((a, b) => b.timestamp - a.timestamp);
+      .sort((a, b) => Math.abs(b.percentChange) - Math.abs(a.percentChange));
 
     res.json({
       success: true,
       data: {
-        latestSignal: successfulResults[0] || null,
-        totalScanned: POPULAR_SYMBOLS.length,
-        signalsFound: successfulResults.length,
-        allSignals: successfulResults, // Return ALL signals
+        totalScanned: ALL_SYMBOLS.length,
+        pumpDumpsFound: pumpDumps.length,
+        signals: pumpDumps, // All pump/dump signals
+        timestamp: Date.now(),
       },
     });
   } catch (error) {
@@ -296,11 +331,11 @@ export async function scanArbitrage(req: Request, res: Response) {
 
     logger.info('Arbitrage scan requested');
 
-    let symbolList: string[] | undefined;
+    let symbolList: string[];
     if (symbols && typeof symbols === 'string') {
       symbolList = symbols.split(',');
     } else {
-      // If no symbols provided, use ALL available symbols
+      // Use ALL 100+ available symbols from getTradingSymbols
       const allSymbols = [
         'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
         'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
@@ -309,6 +344,19 @@ export async function scanArbitrage(req: Request, res: Response) {
         'BCH-USDT', 'HYPE-USDT', 'ZEC-USDT', 'STG-USDT', 'STRK-USDT',
         'OP-USDT', 'SUI-USDT', 'PEPE-USDT', 'SHIB-USDT', 'TRX-USDT',
         'TON-USDT', 'NEAR-USDT', 'ICP-USDT', 'APE-USDT', 'LDO-USDT',
+        'AAVE-USDT', 'MKR-USDT', 'SNX-USDT', 'GRT-USDT', 'FTM-USDT',
+        'SAND-USDT', 'MANA-USDT', 'AXS-USDT', 'THETA-USDT', 'XTZ-USDT',
+        'EOS-USDT', 'ASTR-USDT', 'FLR-USDT', 'KAVA-USDT', 'RUNE-USDT',
+        'SUSHI-USDT', 'COMP-USDT', 'YFI-USDT', 'CRV-USDT', 'BAL-USDT',
+        '1INCH-USDT', 'ENJ-USDT', 'CHZ-USDT', 'ZIL-USDT', 'QTUM-USDT',
+        'VET-USDT', 'HOT-USDT', 'ZRX-USDT', 'BAT-USDT', 'IOTA-USDT',
+        'OMG-USDT', 'ANT-USDT', 'REP-USDT', 'KNC-USDT', 'LSK-USDT',
+        'WAVES-USDT', 'ICX-USDT', 'ONT-USDT', 'ZEN-USDT', 'DASH-USDT',
+        'NEO-USDT', 'GAS-USDT', 'IOST-USDT', 'SC-USDT', 'STORJ-USDT',
+        'STMX-USDT', 'BLZ-USDT', 'KLAY-USDT', 'CELO-USDT', 'AR-USDT',
+        'ROSE-USDT', 'SKL-USDT', 'GNO-USDT', 'OCEAN-USDT', 'NKN-USDT',
+        'OGN-USDT', 'LRC-USDT', 'RSR-USDT', 'RNDR-USDT', 'MASK-USDT',
+        'CTK-USDT', 'ALICE-USDT', 'FOR-USDT', 'DEGO-USDT', 'POLS-USDT',
       ];
       // Convert BTC-USDT to BTC/USDT for CCXT
       symbolList = allSymbols.map(s => s.replace('-', '/'));
