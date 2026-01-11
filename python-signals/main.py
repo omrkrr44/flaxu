@@ -1,6 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import os
+from pydantic import BaseModel
+from typing import List, Optional
+import pandas as pd
+from strategies.ict import ICTStrategy
+from strategies.scalper import ScalpStrategy
 
 app = FastAPI(
     title="FLAXU Trading Signals Service",
@@ -8,7 +12,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,30 +21,66 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Strategies
+ict_strategy = ICTStrategy()
+scalp_strategy = ScalpStrategy()
+
+# Data Models
+class Candle(BaseModel):
+    timestamp: int
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+class ICTRequest(BaseModel):
+    symbol: str
+    timeframe: str
+    candles: List[Candle]
+
+class ScalpRequest(BaseModel):
+    symbol: str
+    current_price: float
+    price_5m_ago: float
+
+# Routes
 @app.get("/")
 async def root():
-    return {
-        "service": "FLAXU Trading Signals",
-        "status": "operational",
-        "version": "1.0.0"
-    }
+    return {"status": "operational", "service": "FLAXU Signals"}
 
-@app.get("/health")
-async def health():
-    return {
-        "status": "ok",
-        "redis": "connected"  # TODO: Implement actual Redis health check
-    }
+@app.post("/signals/ict")
+async def generate_ict_signal(data: ICTRequest):
+    try:
+        # Convert list of candles to DataFrame
+        df = pd.DataFrame([c.model_dump() for c in data.candles])
+        
+        # Analyze
+        result = ict_strategy.analyze(df)
+        
+        return {
+            "symbol": data.symbol,
+            "timeframe": data.timeframe,
+            "analysis": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# TODO: Implement ICT signal endpoints
-# @app.post("/signals/ict")
-# async def generate_ict_signal(symbol: str):
-#     pass
-
-# TODO: Implement PA signal endpoints
-# @app.post("/signals/pa")
-# async def generate_pa_signal(symbol: str):
-#     pass
+@app.post("/signals/scalp")
+async def generate_scalp_signal(data: ScalpRequest):
+    try:
+        result = scalp_strategy.analyze(
+            symbol=data.symbol, 
+            current_price=data.current_price, 
+            price_5m_ago=data.price_5m_ago
+        )
+        
+        if not result:
+            return {"status": "NO_SIGNAL"}
+            
+        return {"status": "SIGNAL_FOUND", "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

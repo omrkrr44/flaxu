@@ -11,6 +11,16 @@ import { startBalanceCheckJob } from './jobs/balanceCheck.job';
 // Import routes
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
+import marketRoutes from './routes/market.routes';
+import adminRoutes from './routes/admin.routes';
+
+// ...
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/market', marketRoutes);
+app.use('/api/admin', adminRoutes);
 
 const app = express();
 
