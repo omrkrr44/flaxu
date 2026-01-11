@@ -6,7 +6,7 @@ export class MarketController {
     /**
      * Get arbitrage opportunities
      */
-    async getArbitrageOpportunities(req: Request, res: Response) {
+    async getArbitrageOpportunities(_req: Request, res: Response) {
         try {
             const opportunities = await marketService.scanArbitrageOpportunities();
 
@@ -25,7 +25,7 @@ export class MarketController {
     /**
      * Get liquidation heatmap data
      */
-    async getHeatmapData(req: Request, res: Response) {
+    async getHeatmapData(_req: Request, res: Response) {
         try {
             const data = await marketService.getLiquidationHeatmap();
 

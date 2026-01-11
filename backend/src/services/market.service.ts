@@ -22,11 +22,11 @@ interface ExchangePrice {
 export class MarketService {
   // Common symbols to check for arbitrage
   private readonly TARGET_SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'];
-  
+
   // Base URLs for public APIs
   private readonly BINGX_API_URL = 'https://open-api.bingx.com';
   private readonly BINANCE_API_URL = 'https://api.binance.com';
-  private readonly OKX_API_URL = 'https://www.okx.com';
+  // private readonly OKX_API_URL = 'https://www.okx.com';
 
   /**
    * Scans for arbitrage opportunities across supported exchanges
@@ -34,7 +34,7 @@ export class MarketService {
   async scanArbitrageOpportunities(): Promise<ArbitrageOpportunity[]> {
     try {
       const opportunities: ArbitrageOpportunity[] = [];
-      
+
       // Fetch prices in parallel
       const [bingxPrices, binancePrices] = await Promise.all([
         this.getBingXPrices(),
@@ -50,7 +50,7 @@ export class MarketService {
           const prices = [bingx, binance];
           const minPrice = Math.min(...prices.map(p => p.price));
           const maxPrice = Math.max(...prices.map(p => p.price));
-          
+
           const spreadPercentage = ((maxPrice - minPrice) / minPrice) * 100;
 
           // If spread is > 0.5% (considering potential fees ~0.2%)
@@ -87,7 +87,7 @@ export class MarketService {
     try {
       // BingX Swap Ticker Endpoint
       const response = await axios.get(`${this.BINGX_API_URL}/openApi/swap/v2/quote/ticker`);
-      
+
       if (response.data?.code === 0 && Array.isArray(response.data?.data)) {
         return response.data.data.map((item: any) => ({
           symbol: item.symbol,
@@ -109,7 +109,7 @@ export class MarketService {
     try {
       // Binance Ticker Price Endpoint
       const response = await axios.get(`${this.BINANCE_API_URL}/api/v3/ticker/price`);
-      
+
       if (Array.isArray(response.data)) {
         return response.data.map((item: any) => ({
           symbol: item.symbol,

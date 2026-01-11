@@ -3,7 +3,7 @@ import { adminService } from '../services/admin.service';
 import { AppError } from '../middleware/errorHandler';
 
 export class AdminController {
-    async getUsers(req: Request, res: Response) {
+    async getUsers(_req: Request, res: Response) {
         try {
             const users = await adminService.getAllUsers();
             res.status(200).json({ status: 'success', data: { users } });
@@ -12,7 +12,7 @@ export class AdminController {
         }
     }
 
-    async getStats(req: Request, res: Response) {
+    async getStats(_req: Request, res: Response) {
         try {
             const stats = await adminService.getSystemStats();
             res.status(200).json({ status: 'success', data: { stats } });

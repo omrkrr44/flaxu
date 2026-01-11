@@ -6,7 +6,10 @@ import { connectDatabase } from './config/database';
 import { logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
+// Rate limiting jobs
 import { startBalanceCheckJob } from './jobs/balanceCheck.job';
+
+const app = express();
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -21,8 +24,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/admin', adminRoutes);
-
-const app = express();
 
 // Trust proxy for Nginx reverse proxy
 app.set('trust proxy', 1);

@@ -76,7 +76,7 @@ export default function ArbitragePage() {
 
                 {!loading && opportunities.length === 0 && (
                     <div className="col-span-full text-center py-10 text-muted-foreground">
-            No arbitrage opportunities found > 0.5% at the moment.
+                        No arbitrage opportunities found &gt; 0.5% at the moment.
                     </div>
                 )}
             </div>
