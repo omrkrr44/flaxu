@@ -244,41 +244,50 @@ export default function ICTBotPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        <Card className="p-4 bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-blue-500/30">
-          <div className="text-5xl font-bold text-blue-400">{totalSignals}</div>
-          <div className="text-sm text-muted-foreground mt-1">TOTAL SIGNALS</div>
-        </Card>
-        <Card className="p-4 bg-gradient-to-br from-cyan-900/30 to-cyan-800/20 border-cyan-500/30">
-          <div className="text-5xl font-bold text-cyan-400">{activeSignals}</div>
-          <div className="text-sm text-muted-foreground mt-1">ACTIVE</div>
-        </Card>
-        <Card className="p-4 bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30">
-          <div className="text-5xl font-bold text-green-400">{winRate.toFixed(1)}%</div>
-          <div className="text-sm text-muted-foreground mt-1">WIN RATE</div>
-        </Card>
-        <Card className="p-4 bg-gradient-to-br from-emerald-900/30 to-emerald-800/20 border-emerald-500/30">
-          <div className="text-5xl font-bold text-emerald-400">{tpHits}</div>
-          <div className="text-sm text-muted-foreground mt-1">TP HITS</div>
-        </Card>
-        <Card className="p-4 bg-gradient-to-br from-red-900/30 to-red-800/20 border-red-500/30">
-          <div className="text-5xl font-bold text-red-400">{slHits}</div>
-          <div className="text-sm text-muted-foreground mt-1">SL HITS</div>
-        </Card>
-        <Card className="p-4 bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30">
-          <div className="text-5xl font-bold text-green-400">{longWinRate.toFixed(1)}%</div>
-          <div className="text-sm text-muted-foreground mt-1">LONG WIN RATE</div>
-        </Card>
-        <Card className="p-4 bg-gradient-to-br from-rose-900/30 to-rose-800/20 border-rose-500/30">
-          <div className="text-5xl font-bold text-rose-400">{shortWinRate.toFixed(1)}%</div>
-          <div className="text-sm text-muted-foreground mt-1">SHORT WIN RATE</div>
-        </Card>
-        <Card className="p-4 bg-gradient-to-br from-purple-900/30 to-purple-800/20 border-purple-500/30">
-          <div className="text-5xl font-bold text-purple-400">{avgPnl.toFixed(1)}%</div>
-          <div className="text-sm text-muted-foreground mt-1">ORT. SINYAL GÜÇ</div>
-        </Card>
-      </div>
+      {/* Stats - Compact Horizontal */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-blue-400">{totalSignals}</div>
+            <div className="text-xs text-muted-foreground uppercase">Total Signals</div>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-cyan-400">{activeSignals}</div>
+            <div className="text-xs text-muted-foreground uppercase">Active</div>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-green-400">{winRate.toFixed(1)}%</div>
+            <div className="text-xs text-muted-foreground uppercase">Win Rate</div>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-emerald-400">{tpHits}</div>
+            <div className="text-xs text-muted-foreground uppercase">TP Hits</div>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-red-400">{slHits}</div>
+            <div className="text-xs text-muted-foreground uppercase">SL Hits</div>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-green-400">{longWinRate.toFixed(1)}%</div>
+            <div className="text-xs text-muted-foreground uppercase">Long Win Rate</div>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-rose-400">{shortWinRate.toFixed(1)}%</div>
+            <div className="text-xs text-muted-foreground uppercase">Short Win Rate</div>
+          </div>
+          <div className="h-8 w-px bg-border"></div>
+          <div className="flex items-center gap-2">
+            <div className="text-2xl font-bold text-purple-400">{avgPnl.toFixed(1)}%</div>
+            <div className="text-xs text-muted-foreground uppercase">Ort. Sinyal Güç</div>
+          </div>
+        </div>
+      </Card>
 
       {/* Filter Tabs */}
       <div className="flex gap-2">

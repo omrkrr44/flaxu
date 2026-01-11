@@ -399,4 +399,50 @@ export class BingXClient {
       return false;
     }
   }
+
+  /**
+   * Fetch kline/candlestick data (PUBLIC endpoint - no auth required)
+   * Endpoint: GET /openApi/swap/v2/quote/klines
+   * Docs: https://bingx-api.github.io/docs/#/en-us/swapV2/market-api.html#K-Line%20Data
+   */
+  async fetchKlines(params: {
+    symbol: string;
+    interval: '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
+    limit?: number;
+    startTime?: number;
+    endTime?: number;
+  }): Promise<any[]> {
+    try {
+      const queryParams: Record<string, any> = {
+        symbol: params.symbol.replace('-', ''),  // BTC-USDT -> BTCUSDT
+        interval: params.interval,
+        limit: params.limit || 200,
+      };
+
+      if (params.startTime) queryParams.startTime = params.startTime;
+      if (params.endTime) queryParams.endTime = params.endTime;
+
+      // Public endpoint - no signature required
+      const queryString = Object.keys(queryParams)
+        .map(key => `${key}=${queryParams[key]}`)
+        .join('&');
+
+      const response = await this.axiosInstance.get(`/openApi/swap/v2/quote/klines?${queryString}`);
+
+      if (response.data.code !== 0) {
+        throw new Error(`BingX API Error: ${response.data.msg || 'Unknown error'}`);
+      }
+
+      return response.data.data || [];
+    } catch (error: any) {
+      logger.error(`Failed to fetch klines for ${params.symbol}:`, error.message);
+      throw error;
+    }
+  }
 }
+
+// Create a default public client for market data (doesn't need API keys)
+export const publicBingXClient = new BingXClient({
+  apiKey: 'public',
+  secretKey: 'public',
+});

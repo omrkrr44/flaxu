@@ -5,6 +5,7 @@ import { sniperScalpService } from '../services/trading/sniper-scalp.service';
 import { arbitrageScannerService } from '../services/trading/arbitrage-scanner.service';
 import { liquidityHeatmapService } from '../services/trading/liquidity-heatmap.service';
 import { cache } from '../config/redis';
+import { publicBingXClient } from '../services/bingx.client';
 import type { Candle } from '../services/trading/ict-bot.service';
 
 // ============================================================================
@@ -21,36 +22,32 @@ async function fetchCandlesFromBingX(
   if (cached) return cached;
 
   try {
-    // For now, we'll use a mock implementation since BingX client doesn't have fetchCandles
-    // In production, you'd implement this using BingX kline API
-    // GET /openApi/swap/v2/quote/klines
+    // Fetch real kline data from BingX
+    const klines = await publicBingXClient.fetchKlines({
+      symbol,
+      interval: interval as any,
+      limit,
+    });
 
-    // Mock data for demonstration
-    const now = Date.now();
-    const intervalMs = getIntervalMs(interval);
-    const candles: Candle[] = [];
-
-    for (let i = limit - 1; i >= 0; i--) {
-      const timestamp = now - (i * intervalMs);
-      const basePrice = 40000; // Mock BTC price
-      const volatility = Math.random() * 0.02;
-
-      candles.push({
-        timestamp,
-        open: basePrice * (1 + (Math.random() - 0.5) * volatility),
-        high: basePrice * (1 + Math.random() * volatility),
-        low: basePrice * (1 - Math.random() * volatility),
-        close: basePrice * (1 + (Math.random() - 0.5) * volatility),
-        volume: Math.random() * 1000,
-      });
-    }
+    // Convert BingX kline format to our Candle format
+    // BingX kline format: [time, open, high, low, close, volume]
+    const candles: Candle[] = klines.map((kline: any) => ({
+      timestamp: kline.time,
+      open: parseFloat(kline.open),
+      high: parseFloat(kline.high),
+      low: parseFloat(kline.low),
+      close: parseFloat(kline.close),
+      volume: parseFloat(kline.volume),
+    }));
 
     // Cache for interval duration
-    await cache.set(cacheKey, candles, intervalMs / 1000);
+    const intervalMs = getIntervalMs(interval);
+    await cache.set(cacheKey, candles, Math.min(intervalMs / 1000, 300)); // Max 5 min cache
 
     return candles;
   } catch (error) {
     logger.error(`Failed to fetch candles for ${symbol}:`, error);
+    // Return empty array instead of mock data on error
     return [];
   }
 }
