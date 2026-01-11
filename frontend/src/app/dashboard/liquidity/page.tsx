@@ -5,28 +5,33 @@ import { apiClient } from '@/lib/api-client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
-interface LiquidityLevel {
+interface LiquidityCluster {
   price: number;
-  totalVolume: number;
-  exchanges: {
-    [exchange: string]: number;
-  };
-  type: 'bid' | 'ask';
-  strength: number; // 0-100
+  liquidity: number;
+  side: 'bid' | 'ask';
+  strength: number;
+  exchanges: string[];
 }
 
 interface LiquidityHeatmap {
   symbol: string;
   timestamp: number;
   currentPrice: number;
-  levels: LiquidityLevel[];
-  clusters: {
-    price: number;
-    strength: number;
-    type: 'support' | 'resistance';
-    volume: number;
-  }[];
-  exchanges: string[];
+  bidClusters: LiquidityCluster[];
+  askClusters: LiquidityCluster[];
+  orderBook: {
+    symbol: string;
+    timestamp: number;
+    bids: any[];
+    asks: any[];
+    exchanges: string[];
+    totalBidLiquidity: number;
+    totalAskLiquidity: number;
+  };
+  strongestSupport: number;
+  strongestResistance: number;
+  liquidityRatio: number;
+  marketSentiment: 'bullish' | 'bearish' | 'neutral';
 }
 
 export default function LiquidityHeatmapPage() {
@@ -44,8 +49,9 @@ export default function LiquidityHeatmapPage() {
     setError(null);
 
     try {
-      // Encode symbol to handle slashes in URLs
-      const encodedSymbol = encodeURIComponent(symbol);
+      // Convert BTC-USDT to BTC/USDT for CCXT exchanges
+      const ccxtSymbol = symbol.replace('-', '/');
+      const encodedSymbol = encodeURIComponent(ccxtSymbol);
       const response = await apiClient.get(`/api/trading/liquidity/heatmap/${encodedSymbol}`);
       // Backend returns { success: true, data: {...} }
       if (response.data?.success && response.data?.data) {
@@ -220,7 +226,7 @@ export default function LiquidityHeatmapPage() {
               </div>
               <div>
                 <div className="text-sm text-white/80">Exchanges</div>
-                <div className="text-2xl font-bold">{heatmap.exchanges?.length || 0}</div>
+                <div className="text-2xl font-bold">{heatmap.orderBook?.exchanges?.length || 0}</div>
               </div>
               <div>
                 <div className="text-sm text-white/80">Last Update</div>
@@ -231,42 +237,76 @@ export default function LiquidityHeatmapPage() {
             </div>
           </Card>
 
-          {/* Liquidity Clusters */}
-          {heatmap.clusters && heatmap.clusters.length > 0 && (
+          {/* Support Clusters (Bid Liquidity) */}
+          {heatmap.bidClusters && heatmap.bidClusters.length > 0 && (
             <Card className="p-6">
-              <h3 className="text-xl font-bold mb-4">Major Liquidity Clusters</h3>
+              <h3 className="text-xl font-bold mb-4 text-green-400">🟢 Support Zones (Bid Liquidity)</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {heatmap.clusters.map((cluster, idx) => (
+                {heatmap.bidClusters.map((cluster, idx) => (
                   <div
                     key={idx}
-                    className={`p-4 rounded-lg border-2 ${
-                      cluster.type === 'support'
-                        ? 'bg-green-900/20 border-green-500'
-                        : 'bg-red-900/20 border-red-500'
-                    }`}
+                    className="p-4 rounded-lg border-2 bg-green-900/20 border-green-500"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <div className="text-sm text-muted-foreground">
-                          {cluster.type === 'support' ? '🟢 Support' : '🔴 Resistance'}
-                        </div>
+                        <div className="text-sm text-muted-foreground">Support Level</div>
                         <div className="text-2xl font-bold">${cluster.price.toFixed(2)}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-sm text-muted-foreground">Strength</div>
-                        <div className={`text-xl font-bold ${cluster.type === 'support' ? 'text-green-600' : 'text-red-600'}`}>
+                        <div className="text-xl font-bold text-green-400">
                           {cluster.strength.toFixed(0)}%
                         </div>
                       </div>
                     </div>
-                    <div className="mt-2 pt-2 border-t">
-                      <div className="text-sm text-muted-foreground">Total Volume</div>
-                      <div className="font-bold">{cluster.volume.toFixed(2)} BTC</div>
+                    <div className="mt-2 pt-2 border-t border-green-500/30">
+                      <div className="text-sm text-muted-foreground">Liquidity</div>
+                      <div className="font-bold">{cluster.liquidity.toFixed(2)}</div>
                     </div>
                     <div className="mt-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-700 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full ${cluster.type === 'support' ? 'bg-green-500' : 'bg-red-500'}`}
+                          className="h-2 rounded-full bg-green-500"
+                          style={{ width: `${cluster.strength}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Resistance Clusters (Ask Liquidity) */}
+          {heatmap.askClusters && heatmap.askClusters.length > 0 && (
+            <Card className="p-6">
+              <h3 className="text-xl font-bold mb-4 text-red-400">🔴 Resistance Zones (Ask Liquidity)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {heatmap.askClusters.map((cluster, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-lg border-2 bg-red-900/20 border-red-500"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Resistance Level</div>
+                        <div className="text-2xl font-bold">${cluster.price.toFixed(2)}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground">Strength</div>
+                        <div className="text-xl font-bold text-red-400">
+                          {cluster.strength.toFixed(0)}%
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-red-500/30">
+                      <div className="text-sm text-muted-foreground">Liquidity</div>
+                      <div className="font-bold">{cluster.liquidity.toFixed(2)}</div>
+                    </div>
+                    <div className="mt-2">
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full bg-red-500"
                           style={{ width: `${cluster.strength}%` }}
                         />
                       </div>

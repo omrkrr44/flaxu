@@ -183,7 +183,7 @@ export async function scanAllICT(_req: Request, res: Response) {
         latestSignal: successfulResults[0] || null,
         totalScanned: POPULAR_SYMBOLS.length,
         signalsFound: successfulResults.length,
-        allSignals: successfulResults.slice(0, 10), // Top 10
+        allSignals: successfulResults, // Return ALL signals
       },
     });
   } catch (error) {
@@ -270,7 +270,7 @@ export async function scanAllSniper(_req: Request, res: Response) {
         latestSignal: successfulResults[0] || null,
         totalScanned: POPULAR_SYMBOLS.length,
         signalsFound: successfulResults.length,
-        allSignals: successfulResults.slice(0, 10), // Top 10
+        allSignals: successfulResults, // Return ALL signals
       },
     });
   } catch (error) {
@@ -299,6 +299,19 @@ export async function scanArbitrage(req: Request, res: Response) {
     let symbolList: string[] | undefined;
     if (symbols && typeof symbols === 'string') {
       symbolList = symbols.split(',');
+    } else {
+      // If no symbols provided, use ALL available symbols
+      const allSymbols = [
+        'BTC-USDT', 'ETH-USDT', 'BNB-USDT', 'XRP-USDT', 'ADA-USDT',
+        'SOL-USDT', 'DOGE-USDT', 'DOT-USDT', 'MATIC-USDT', 'LTC-USDT',
+        'AVAX-USDT', 'LINK-USDT', 'UNI-USDT', 'ATOM-USDT', 'ETC-USDT',
+        'XLM-USDT', 'ALGO-USDT', 'FIL-USDT', 'APT-USDT', 'ARB-USDT',
+        'BCH-USDT', 'HYPE-USDT', 'ZEC-USDT', 'STG-USDT', 'STRK-USDT',
+        'OP-USDT', 'SUI-USDT', 'PEPE-USDT', 'SHIB-USDT', 'TRX-USDT',
+        'TON-USDT', 'NEAR-USDT', 'ICP-USDT', 'APE-USDT', 'LDO-USDT',
+      ];
+      // Convert BTC-USDT to BTC/USDT for CCXT
+      symbolList = allSymbols.map(s => s.replace('-', '/'));
     }
 
     const result = await arbitrageScannerService.scanArbitrage(symbolList);
