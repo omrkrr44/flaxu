@@ -20,7 +20,7 @@ export default function ArbitragePage() {
         const fetchData = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get('http://localhost:3001/api/market/arbitrage', {
+                const res = await axios.get('/api/market/arbitrage', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 if (res.data?.data?.opportunities) {
