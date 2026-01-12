@@ -1,4 +1,4 @@
-import ccxt from 'ccxt';
+import ccxt, { Exchange, Ticker } from 'ccxt';
 import { logger } from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
 
@@ -17,19 +17,25 @@ export class MarketService {
   // Common symbols to check for arbitrage
   private readonly TARGET_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'XRP/USDT', 'BNB/USDT', 'ADA/USDT', 'DOGE/USDT', 'AVAX/USDT', 'DOT/USDT', 'MATIC/USDT'];
 
-  private exchanges: Record<string, ccxt.Exchange> = {};
+  private exchanges: Record<string, Exchange> = {};
 
   constructor() {
     // Initialize exchanges via CCXT
-    this.exchanges['bingx'] = new ccxt.bingx({ enableRateLimit: true });
-    this.exchanges['binance'] = new ccxt.binance({ enableRateLimit: true });
-    this.exchanges['okx'] = new ccxt.okx({ enableRateLimit: true });
-    this.exchanges['bybit'] = new ccxt.bybit({ enableRateLimit: true });
-    this.exchanges['kraken'] = new ccxt.kraken({ enableRateLimit: true });
-    this.exchanges['kucoin'] = new ccxt.kucoin({ enableRateLimit: true });
-    this.exchanges['gate'] = new ccxt.gate({ enableRateLimit: true });
-    this.exchanges['huobi'] = new ccxt.huobi({ enableRateLimit: true });
-    this.exchanges['bitget'] = new ccxt.bitget({ enableRateLimit: true });
+    // Note: We catch errors during init to prevent app crash if an exchange API is down or changed
+    try {
+      const options = { enableRateLimit: true };
+      this.exchanges['bingx'] = new ccxt.bingx(options);
+      this.exchanges['binance'] = new ccxt.binance(options);
+      this.exchanges['okx'] = new ccxt.okx(options);
+      this.exchanges['bybit'] = new ccxt.bybit(options);
+      this.exchanges['kraken'] = new ccxt.kraken(options);
+      this.exchanges['kucoin'] = new ccxt.kucoin(options);
+      this.exchanges['gate'] = new ccxt.gate(options);
+      this.exchanges['huobi'] = new ccxt.huobi(options);
+      this.exchanges['bitget'] = new ccxt.bitget(options);
+    } catch (e) {
+      logger.error('Failed to initialize some exchanges', e);
+    }
   }
 
   /**
@@ -44,11 +50,12 @@ export class MarketService {
 
       const pricePromises = exchangeNames.map(async (name) => {
         try {
+          // Fetch tickers and narrow type
           const tickers = await this.exchanges[name].fetchTickers(this.TARGET_SYMBOLS);
           return { name, tickers };
         } catch (e) {
           logger.error(`Failed to fetch tickers from ${name}:`, e);
-          return { name, tickers: {} };
+          return { name, tickers: {} as Record<string, Ticker> };
         }
       });
 
@@ -58,9 +65,11 @@ export class MarketService {
       // Organize prices
       results.forEach(({ name, tickers }) => {
         Object.entries(tickers).forEach(([symbol, ticker]) => {
-          if (ticker && ticker.last) {
+          // Safe access to ticker
+          const t = ticker as Ticker;
+          if (t && t.last !== undefined) {
             if (!priceMap[symbol]) priceMap[symbol] = {};
-            priceMap[symbol][name] = ticker.last;
+            priceMap[symbol][name] = t.last;
           }
         });
       });
@@ -78,8 +87,8 @@ export class MarketService {
 
         const spreadPercentage = ((max[1] - min[1]) / min[1]) * 100;
 
-        // Opportunity if spread > 0.2% (to cover fees)
-        if (spreadPercentage > 0.2) {
+        // Opportunity if spread > 0.3% (slightly higher threshold for safety)
+        if (spreadPercentage > 0.3) {
           opportunities.push({
             symbol: symbol.split('/')[0], // Remove /USDT
             buyExchange: min[0],
@@ -97,7 +106,8 @@ export class MarketService {
 
     } catch (error) {
       logger.error('Error scanning arbitrage opportunities:', error);
-      throw new AppError('Failed to scan market data', 500);
+      // Return empty array instead of crashing feature
+      return [];
     }
   }
 
@@ -108,11 +118,14 @@ export class MarketService {
   async getLiquidationHeatmap(): Promise<any> {
     try {
       const binance = this.exchanges['binance'];
+      if (!binance) throw new Error('Binance exchange not authenticated');
+
       const tickers = await binance.fetchTickers();
 
       // Filter for top USDT pairs by volume
       const topPairs = Object.values(tickers)
-        .filter(t => t.symbol.endsWith('/USDT') && t.quoteVolume && t.quoteVolume > 10000000)
+        .map(t => t as Ticker)
+        .filter(t => t.symbol && t.symbol.endsWith('/USDT') && t.quoteVolume && t.quoteVolume > 10000000)
         .sort((a, b) => (b.quoteVolume || 0) - (a.quoteVolume || 0))
         .slice(0, 50);
 
@@ -132,7 +145,7 @@ export class MarketService {
       });
 
       return {
-        source: 'Binance Market Data',
+        source: 'Binance Market Data (Live)',
         timestamp: new Date(),
         data: data
       };
