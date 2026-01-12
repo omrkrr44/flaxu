@@ -129,18 +129,47 @@ export class MarketService {
    * Note: Using Coinglass API requires an API Key. 
    * As fallback/demo, we return mock data structure or limited free data if available.
    */
+  /**
+   * Get Global Liquidation Heatmap Data
+   * Generates realistic dynamic mock data for demonstration
+   */
   async getLiquidationHeatmap(): Promise<any> {
-    // TODO: Integrate Coinglass API when key is available
-    // For now, return a structural placeholder
+    const symbols = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'ETC'];
+
+    // Generate realistic market movements based on "market sentiment" (randomized)
+    const marketTrend = Math.random() > 0.5 ? 1 : -1;
+
+    const data = symbols.map(symbol => {
+      const volatility = Math.random() * 5;
+      const change = (Math.random() * volatility * marketTrend) + (Math.random() - 0.5);
+
+      let intensity = 'Low';
+      if (Math.abs(change) > 3) intensity = 'High';
+      else if (Math.abs(change) > 1.5) intensity = 'Medium';
+
+      return {
+        symbol,
+        price: this.mockPrice(symbol),
+        change: parseFloat(change.toFixed(2)),
+        liquidationIntensity: intensity,
+        volume: `${(Math.random() * 100).toFixed(1)}M`
+      };
+    });
+
     return {
-      source: 'Coinglass (Mock)',
+      source: 'Coinglass (Simulated)',
       timestamp: new Date(),
-      data: [
-        { symbol: 'BTC', price: 42500, liquidationIntensity: 'High', volume: '15M' },
-        { symbol: 'ETH', price: 2250, liquidationIntensity: 'Medium', volume: '5M' },
-        { symbol: 'SOL', price: 95, liquidationIntensity: 'High', volume: '2M' }
-      ]
+      data: data.sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
     };
+  }
+
+  private mockPrice(symbol: string): number {
+    const prices: { [key: string]: number } = {
+      'BTC': 42000, 'ETH': 2250, 'SOL': 95, 'XRP': 0.55, 'BNB': 305,
+      'ADA': 0.50, 'DOGE': 0.08, 'AVAX': 35, 'DOT': 7.5, 'MATIC': 0.85
+    };
+    const base = prices[symbol] || 10;
+    return base + (Math.random() * base * 0.05);
   }
 }
 

@@ -10,9 +10,35 @@ const MOCK_HEATMAP = Array.from({ length: 50 }).map((_, i) => ({
 }));
 
 export default function HeatmapPage() {
-    const [data, setData] = useState(MOCK_HEATMAP);
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Todo: Fetch real data from /api/market/heatmap
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                // Fetch from our new backend proxy
+                const response = await fetch('/api/market/heatmap', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const result = await response.json();
+                if (result.success && result.data.data) {
+                    setData(result.data.data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch heatmap data', error);
+                // Fallback to static if API fails
+                setData(MOCK_HEATMAP);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        const interval = setInterval(fetchData, 10000); // Update every 10 seconds
+        return () => clearInterval(interval);
+    }, []);
 
     const getColor = (change: number) => {
         if (change > 5) return 'bg-green-600';

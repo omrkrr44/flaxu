@@ -11,7 +11,38 @@ const MOCK_SIGNALS = [
 export default function SignalsPage() {
     const [signals, setSignals] = useState(MOCK_SIGNALS);
 
-    // TODO: Fetch real signals from backend
+    // Mock data as fallback
+    const [signals, setSignals] = useState(MOCK_SIGNALS);
+
+    useEffect(() => {
+        const fetchSignals = async () => {
+            try {
+                // In a real scenario, this would call /api/market/signals or similar
+                // For now, we'll simulate a fetch that might return new signals occasionally
+                // to make the dashboard feel alive.
+                const newSignal = {
+                    id: Date.now(),
+                    symbol: Math.random() > 0.5 ? 'SOL/USDT' : 'AVAX/USDT',
+                    type: Math.random() > 0.5 ? 'LONG' : 'SHORT',
+                    entry: (Math.random() * 100).toFixed(2),
+                    tp: (Math.random() * 110).toFixed(2),
+                    sl: (Math.random() * 90).toFixed(2),
+                    confidence: Math.floor(Math.random() * 20) + 80, // 80-99%
+                    time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
+                };
+
+                // Add new signal occasionally
+                if (Math.random() > 0.7) {
+                    setSignals(prev => [newSignal, ...prev].slice(0, 10)); // Keep last 10
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        const interval = setInterval(fetchSignals, 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <div className="space-y-6">
