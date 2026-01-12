@@ -2,7 +2,12 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Load environment variables
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Try to load from root (dev) or from compiled location (prod)
+const envPath = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, '../../../.env')
+  : path.join(__dirname, '../../.env');
+
+dotenv.config({ path: envPath });
 
 interface Config {
   // App
