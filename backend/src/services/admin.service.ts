@@ -1,5 +1,5 @@
 import { prisma } from '../config/database';
-import { AppError } from '../middleware/errorHandler';
+// import { AppError } from '../middleware/errorHandler';
 import { AccessLevel } from '@prisma/client';
 
 export class AdminService {
