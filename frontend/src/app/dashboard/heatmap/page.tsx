@@ -11,7 +11,8 @@ const MOCK_HEATMAP = Array.from({ length: 50 }).map((_, i) => ({
 
 export default function HeatmapPage() {
     const [data, setData] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<any[]>([]);
+    // const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -31,7 +32,7 @@ export default function HeatmapPage() {
                 // Fallback to static if API fails
                 setData(MOCK_HEATMAP);
             } finally {
-                setLoading(false);
+                // setLoading(false);
             }
         };
 
