@@ -1,6 +1,6 @@
 import ccxt, { Exchange, Ticker } from 'ccxt';
 import { logger } from '../utils/logger';
-import { AppError } from '../middleware/errorHandler';
+
 
 interface ArbitrageOpportunity {
   symbol: string;
