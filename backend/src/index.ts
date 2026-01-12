@@ -20,11 +20,6 @@ import adminRoutes from './routes/admin.routes';
 // ...
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/market', marketRoutes);
-app.use('/api/admin', adminRoutes);
-
 // Trust proxy for Nginx reverse proxy
 app.set('trust proxy', 1);
 
@@ -54,6 +49,8 @@ app.get('/health', (_req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/market', marketRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
