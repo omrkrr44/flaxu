@@ -25,6 +25,12 @@ for (const envPath of possiblePaths) {
 
 if (!envLoaded) {
   console.warn('⚠️ Could not find .env file in any of the expected locations!');
+} else {
+  console.log('🔍 Environment Debug:', {
+    BACKEND_PORT_ENV: process.env.BACKEND_PORT,
+    PORT_ENV: process.env.PORT,
+    NODE_ENV: process.env.NODE_ENV
+  });
 }
 
 interface Config {
