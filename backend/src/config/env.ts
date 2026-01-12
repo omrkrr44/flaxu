@@ -2,12 +2,30 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Load environment variables
-// Try to load from root (dev) or from compiled location (prod)
-const envPath = process.env.NODE_ENV === 'production'
-  ? path.join(__dirname, '../../../.env')
-  : path.join(__dirname, '../../.env');
+import fs from 'fs';
 
-dotenv.config({ path: envPath });
+// Load environment variables
+// Try to find .env file in potential locations
+const possiblePaths = [
+  path.join(__dirname, '../../.env'), // Dev: backend/src/config -> backend/.env
+  path.join(__dirname, '../../../.env'), // Prod: backend/dist/config -> backend/.env
+  path.join(process.cwd(), '.env'), // Current working directory
+  path.join(process.cwd(), '../.env') // Parent of CWD
+];
+
+let envLoaded = false;
+for (const envPath of possiblePaths) {
+  if (fs.existsSync(envPath)) {
+    console.log(`✅ Loaded .env from: ${envPath}`);
+    dotenv.config({ path: envPath });
+    envLoaded = true;
+    break;
+  }
+}
+
+if (!envLoaded) {
+  console.warn('⚠️ Could not find .env file in any of the expected locations!');
+}
 
 interface Config {
   // App
