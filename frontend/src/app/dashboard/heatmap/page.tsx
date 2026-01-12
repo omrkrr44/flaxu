@@ -11,7 +11,6 @@ const MOCK_HEATMAP = Array.from({ length: 50 }).map((_, i) => ({
 
 export default function HeatmapPage() {
     const [data, setData] = useState<any[]>([]);
-    const [data, setData] = useState<any[]>([]);
     // const [loading, setLoading] = useState(true);
 
     useEffect(() => {
