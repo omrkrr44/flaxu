@@ -23,7 +23,13 @@ export class MarketService {
     // Initialize exchanges via CCXT
     this.exchanges['bingx'] = new ccxt.bingx({ enableRateLimit: true });
     this.exchanges['binance'] = new ccxt.binance({ enableRateLimit: true });
-    // this.exchanges['okx'] = new ccxt.okx({ enableRateLimit: true });
+    this.exchanges['okx'] = new ccxt.okx({ enableRateLimit: true });
+    this.exchanges['bybit'] = new ccxt.bybit({ enableRateLimit: true });
+    this.exchanges['kraken'] = new ccxt.kraken({ enableRateLimit: true });
+    this.exchanges['kucoin'] = new ccxt.kucoin({ enableRateLimit: true });
+    this.exchanges['gate'] = new ccxt.gate({ enableRateLimit: true });
+    this.exchanges['huobi'] = new ccxt.huobi({ enableRateLimit: true });
+    this.exchanges['bitget'] = new ccxt.bitget({ enableRateLimit: true });
   }
 
   /**
