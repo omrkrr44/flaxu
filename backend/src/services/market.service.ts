@@ -1,4 +1,4 @@
-import axios from 'axios';
+import ccxt from 'ccxt';
 import { logger } from '../utils/logger';
 import { AppError } from '../middleware/errorHandler';
 
@@ -13,64 +13,79 @@ interface ArbitrageOpportunity {
   timestamp: Date;
 }
 
-interface ExchangePrice {
-  symbol: string;
-  price: number;
-  exchange: string;
-}
-
 export class MarketService {
   // Common symbols to check for arbitrage
-  private readonly TARGET_SYMBOLS = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'];
+  private readonly TARGET_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'XRP/USDT', 'BNB/USDT', 'ADA/USDT', 'DOGE/USDT', 'AVAX/USDT', 'DOT/USDT', 'MATIC/USDT'];
 
-  // Base URLs for public APIs
-  private readonly BINGX_API_URL = 'https://open-api.bingx.com';
-  private readonly BINANCE_API_URL = 'https://api.binance.com';
-  // private readonly OKX_API_URL = 'https://www.okx.com';
+  private exchanges: Record<string, ccxt.Exchange> = {};
+
+  constructor() {
+    // Initialize exchanges via CCXT
+    this.exchanges['bingx'] = new ccxt.bingx({ enableRateLimit: true });
+    this.exchanges['binance'] = new ccxt.binance({ enableRateLimit: true });
+    // this.exchanges['okx'] = new ccxt.okx({ enableRateLimit: true });
+  }
 
   /**
-   * Scans for arbitrage opportunities across supported exchanges
+   * Scans for arbitrage opportunities across supported exchanges using CCXT
    */
   async scanArbitrageOpportunities(): Promise<ArbitrageOpportunity[]> {
     try {
       const opportunities: ArbitrageOpportunity[] = [];
 
-      // Fetch prices in parallel
-      const [bingxPrices, binancePrices] = await Promise.all([
-        this.getBingXPrices(),
-        this.getBinancePrices()
-      ]);
+      // Fetch tickers in parallel
+      const exchangeNames = Object.keys(this.exchanges);
 
-      // Compare prices for target symbols
-      for (const symbol of this.TARGET_SYMBOLS) {
-        const bingx = bingxPrices.find(p => p.symbol === `${symbol}-USDT`);
-        const binance = binancePrices.find(p => p.symbol === `${symbol}USDT`);
-
-        if (bingx && binance) {
-          const prices = [bingx, binance];
-          const minPrice = Math.min(...prices.map(p => p.price));
-          const maxPrice = Math.max(...prices.map(p => p.price));
-
-          const spreadPercentage = ((maxPrice - minPrice) / minPrice) * 100;
-
-          // If spread is > 0.5% (considering potential fees ~0.2%)
-          if (spreadPercentage > 0.5) {
-            const buyOp = prices.find(p => p.price === minPrice)!;
-            const sellOp = prices.find(p => p.price === maxPrice)!;
-
-            opportunities.push({
-              symbol,
-              buyExchange: buyOp.exchange,
-              sellExchange: sellOp.exchange,
-              buyPrice: buyOp.price,
-              sellPrice: sellOp.price,
-              spread: parseFloat(spreadPercentage.toFixed(2)),
-              potentialProfit: `${spreadPercentage.toFixed(2)}%`,
-              timestamp: new Date()
-            });
-          }
+      const pricePromises = exchangeNames.map(async (name) => {
+        try {
+          const tickers = await this.exchanges[name].fetchTickers(this.TARGET_SYMBOLS);
+          return { name, tickers };
+        } catch (e) {
+          logger.error(`Failed to fetch tickers from ${name}:`, e);
+          return { name, tickers: {} };
         }
-      }
+      });
+
+      const results = await Promise.all(pricePromises);
+      const priceMap: Record<string, Record<string, number>> = {}; // symbol -> exchange -> price
+
+      // Organize prices
+      results.forEach(({ name, tickers }) => {
+        Object.entries(tickers).forEach(([symbol, ticker]) => {
+          if (ticker && ticker.last) {
+            if (!priceMap[symbol]) priceMap[symbol] = {};
+            priceMap[symbol][name] = ticker.last;
+          }
+        });
+      });
+
+      // Calculate spreads
+      Object.entries(priceMap).forEach(([symbol, exchanges]) => {
+        const prices = Object.entries(exchanges);
+        if (prices.length < 2) return;
+
+        // Find min and max
+        prices.sort((a, b) => a[1] - b[1]);
+
+        const min = prices[0];
+        const max = prices[prices.length - 1];
+
+        const spreadPercentage = ((max[1] - min[1]) / min[1]) * 100;
+
+        // Opportunity if spread > 0.2% (to cover fees)
+        if (spreadPercentage > 0.2) {
+          opportunities.push({
+            symbol: symbol.split('/')[0], // Remove /USDT
+            buyExchange: min[0],
+            sellExchange: max[0],
+            buyPrice: min[1],
+            sellPrice: max[1],
+            spread: parseFloat(spreadPercentage.toFixed(2)),
+            potentialProfit: `${spreadPercentage.toFixed(2)}%`,
+            timestamp: new Date()
+          });
+        }
+      });
 
       return opportunities.sort((a, b) => b.spread - a.spread);
 
@@ -81,95 +96,46 @@ export class MarketService {
   }
 
   /**
-   * Fetches latest prices from BingX
-   */
-  private async getBingXPrices(): Promise<ExchangePrice[]> {
-    try {
-      // BingX Swap Ticker Endpoint
-      const response = await axios.get(`${this.BINGX_API_URL}/openApi/swap/v2/quote/ticker`);
-
-      if (response.data?.code === 0 && Array.isArray(response.data?.data)) {
-        return response.data.data.map((item: any) => ({
-          symbol: item.symbol,
-          price: parseFloat(item.lastPrice),
-          exchange: 'BingX'
-        }));
-      }
-      return [];
-    } catch (error) {
-      logger.error('BingX API Error:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Fetches latest prices from Binance
-   */
-  private async getBinancePrices(): Promise<ExchangePrice[]> {
-    try {
-      // Binance Ticker Price Endpoint
-      const response = await axios.get(`${this.BINANCE_API_URL}/api/v3/ticker/price`);
-
-      if (Array.isArray(response.data)) {
-        return response.data.map((item: any) => ({
-          symbol: item.symbol,
-          price: parseFloat(item.price),
-          exchange: 'Binance'
-        }));
-      }
-      return [];
-    } catch (error) {
-      logger.error('Binance API Error:', error);
-      return [];
-    }
-  }
-
-  /**
    * Get Global Liquidation Heatmap Data
-   * Note: Using Coinglass API requires an API Key. 
-   * As fallback/demo, we return mock data structure or limited free data if available.
-   */
-  /**
-   * Get Global Liquidation Heatmap Data
-   * Generates realistic dynamic mock data for demonstration
+   * Uses CCXT to fetch 24h volume and price change to generate a realistic heatmap
    */
   async getLiquidationHeatmap(): Promise<any> {
-    const symbols = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC', 'LINK', 'UNI', 'ATOM', 'LTC', 'ETC'];
+    try {
+      const binance = this.exchanges['binance'];
+      const tickers = await binance.fetchTickers();
 
-    // Generate realistic market movements based on "market sentiment" (randomized)
-    const marketTrend = Math.random() > 0.5 ? 1 : -1;
+      // Filter for top USDT pairs by volume
+      const topPairs = Object.values(tickers)
+        .filter(t => t.symbol.endsWith('/USDT') && t.quoteVolume && t.quoteVolume > 10000000)
+        .sort((a, b) => (b.quoteVolume || 0) - (a.quoteVolume || 0))
+        .slice(0, 50);
 
-    const data = symbols.map(symbol => {
-      const volatility = Math.random() * 5;
-      const change = (Math.random() * volatility * marketTrend) + (Math.random() - 0.5);
+      const data = topPairs.map(t => {
+        const change = t.percentage || 0;
+        let intensity = 'Low';
+        if (Math.abs(change) > 5) intensity = 'High';
+        else if (Math.abs(change) > 2.5) intensity = 'Medium';
 
-      let intensity = 'Low';
-      if (Math.abs(change) > 3) intensity = 'High';
-      else if (Math.abs(change) > 1.5) intensity = 'Medium';
+        return {
+          symbol: t.symbol.replace('/USDT', ''),
+          price: t.last,
+          change: parseFloat(change.toFixed(2)),
+          liquidationIntensity: intensity,
+          volume: `${((t.quoteVolume || 0) / 1000000).toFixed(1)}M`
+        };
+      });
 
       return {
-        symbol,
-        price: this.mockPrice(symbol),
-        change: parseFloat(change.toFixed(2)),
-        liquidationIntensity: intensity,
-        volume: `${(Math.random() * 100).toFixed(1)}M`
+        source: 'Binance Market Data',
+        timestamp: new Date(),
+        data: data
       };
-    });
 
-    return {
-      source: 'Coinglass (Simulated)',
-      timestamp: new Date(),
-      data: data.sort((a, b) => Math.abs(b.change) - Math.abs(a.change))
-    };
-  }
-
-  private mockPrice(symbol: string): number {
-    const prices: { [key: string]: number } = {
-      'BTC': 42000, 'ETH': 2250, 'SOL': 95, 'XRP': 0.55, 'BNB': 305,
-      'ADA': 0.50, 'DOGE': 0.08, 'AVAX': 35, 'DOT': 7.5, 'MATIC': 0.85
-    };
-    const base = prices[symbol] || 10;
-    return base + (Math.random() * base * 0.05);
+    } catch (error) {
+      logger.error('Heatmap Data Error:', error);
+      // Fallback to empty if fails
+      return { source: 'Error', timestamp: new Date(), data: [] };
+    }
   }
 }
 
