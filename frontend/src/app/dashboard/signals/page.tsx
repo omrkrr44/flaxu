@@ -18,9 +18,9 @@ export default function SignalsPage() {
                 id: Date.now(),
                 symbol: Math.random() > 0.5 ? 'SOL/USDT' : 'AVAX/USDT',
                 type: Math.random() > 0.5 ? 'LONG' : 'SHORT',
-                entry: (Math.random() * 100).toFixed(2),
-                tp: (Math.random() * 110).toFixed(2),
-                sl: (Math.random() * 90).toFixed(2),
+                entry: parseFloat((Math.random() * 100).toFixed(2)),
+                tp: parseFloat((Math.random() * 110).toFixed(2)),
+                sl: parseFloat((Math.random() * 90).toFixed(2)),
                 confidence: Math.floor(Math.random() * 20) + 80, // 80-99%
                 time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })
             };
